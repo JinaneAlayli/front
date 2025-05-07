@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Calendar, DollarSign, FileText, Edit, Trash2, Upload, Download, AlertCircle } from "lucide-react"
+import { Calendar, DollarSign, FileText, Edit, Trash2, Upload, Download, AlertCircle, Calculator } from "lucide-react"
 import businessSettingsService from "@/lib/services/business-settings.service"
 import type { BusinessSettings } from "@/lib/services/business-settings.service"
+import SalaryFormModal from "./SalaryFormModal"
 
 interface SalaryTableProps {
   salaries: any[]
@@ -14,6 +15,9 @@ interface SalaryTableProps {
   onUploadPayslip: (salary: any) => void
   onRequestPayslip: (userId: number) => void
   onDownloadPayslip: (fileUrl: string) => void
+  onSalaryCreated?: () => void
+  onSalaryUpdated?: () => void
+  userRoleId?: number
 }
 
 export default function SalaryTable({
@@ -25,10 +29,16 @@ export default function SalaryTable({
   onUploadPayslip,
   onRequestPayslip,
   onDownloadPayslip,
+  onSalaryCreated,
+  onSalaryUpdated,
+  userRoleId,
 }: SalaryTableProps) {
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null)
   const [settingsLoading, setSettingsLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [selectedSalary, setSelectedSalary] = useState<any>(null)
+  const [generateFromAttendance, setGenerateFromAttendance] = useState(false)
 
   // Fetch business settings
   useEffect(() => {
@@ -112,6 +122,22 @@ export default function SalaryTable({
     } else {
       setExpandedRow(id)
     }
+  }
+
+  const handleFormSuccess = () => {
+    setIsFormOpen(false)
+    setSelectedSalary(null)
+    setGenerateFromAttendance(false)
+    if (onSalaryCreated) onSalaryCreated()
+    if (onSalaryUpdated) onSalaryUpdated()
+  }
+
+  const handleGenerateFromAttendance = (salary: any) => {
+    // Open the salary form with the selected salary record
+    // and trigger the generate from attendance function
+    setSelectedSalary(salary)
+    setGenerateFromAttendance(true)
+    setIsFormOpen(true)
   }
 
   return (
@@ -265,6 +291,16 @@ export default function SalaryTable({
                         </svg>
                       </button>
 
+                      {(userRoleId === 2 || userRoleId === 3) && (
+                        <button
+                          onClick={() => handleGenerateFromAttendance(salary)}
+                          className="rounded bg-blue-100 p-1.5 text-blue-600 transition-colors hover:bg-blue-200"
+                          title="Generate salary adjustments from attendance records"
+                        >
+                          <Calculator size={16} />
+                        </button>
+                      )}
+
                       {isManager && (
                         <>
                           <button
@@ -340,6 +376,19 @@ export default function SalaryTable({
             ))}
           </tbody>
         </table>
+      )}
+      {isFormOpen && (
+        <SalaryFormModal
+          open={isFormOpen}
+          onClose={() => {
+            setIsFormOpen(false)
+            setSelectedSalary(null)
+            setGenerateFromAttendance(false)
+          }}
+          onSuccess={handleFormSuccess}
+          initialSalary={selectedSalary}
+          generateFromAttendance={generateFromAttendance}
+        />
       )}
     </div>
   )

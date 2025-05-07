@@ -35,11 +35,18 @@ export default function AttendanceStats({ records, loading, isManager, isLeader,
       }
     }
 
-    const totalHours = filteredRecords.reduce((sum, record) => sum + (record.worked_hours || 0), 0)
+    // Ensure we're working with numbers by converting worked_hours to numbers
+    const totalHours = filteredRecords.reduce((sum, record) => {
+      // Convert worked_hours to a number or use 0 if it's not a valid number
+      const hours =
+        typeof record.worked_hours === "number" ? record.worked_hours : Number.parseFloat(record.worked_hours) || 0
+      return sum + hours
+    }, 0)
+
     const presentDays = filteredRecords.filter((record) => record.status === "present").length
     const totalDays = filteredRecords.length
     const attendanceRate = (presentDays / totalDays) * 100
-    const averageHours = totalHours / presentDays || 0
+    const averageHours = totalDays > 0 ? totalHours / presentDays : 0
 
     // Assuming check-in before 9:30 AM is considered on time
     const onTimeDays = filteredRecords.filter((record) => {
@@ -48,7 +55,7 @@ export default function AttendanceStats({ records, loading, isManager, isLeader,
       return hours < 9 || (hours === 9 && minutes <= 30)
     }).length
 
-    const onTimeRate = (onTimeDays / presentDays) * 100 || 0
+    const onTimeRate = presentDays > 0 ? (onTimeDays / presentDays) * 100 : 0
 
     return {
       totalHours: Number.parseFloat(totalHours.toFixed(2)),

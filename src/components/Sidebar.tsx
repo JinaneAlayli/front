@@ -6,14 +6,12 @@ import { useDispatch, useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import { logout, updateUser } from "@/lib/redux/slices/authSlice"
 import api from "@/lib/api"
-
 import {
   Home,
   Users,
   Clock,
   ClipboardCheck,
   Megaphone,
-  TrendingUp,
   Settings,
   LogOut,
   UserCircle,
@@ -21,6 +19,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   UserPlus,
+  DollarSign,
+  BarChart4,
+  Menu,
 } from "lucide-react"
 
 import Image from "next/image"
@@ -32,7 +33,11 @@ function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(" ")
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  onToggle?: (collapsed: boolean) => void
+}
+
+export default function Sidebar({ onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const dispatch = useDispatch()
@@ -45,6 +50,8 @@ export default function Sidebar() {
   const [logoError, setLogoError] = useState(false)
   const [logoIconError, setLogoIconError] = useState(false)
   const [imageTimestamp, setImageTimestamp] = useState<string>("")
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [hoveredLink, setHoveredLink] = useState<string | null>(null)
 
   // Effect to load collapsed state from localStorage
   useEffect(() => {
@@ -63,7 +70,11 @@ export default function Sidebar() {
   // Effect to save collapsed state to localStorage
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", isCollapsed.toString())
-  }, [isCollapsed])
+    // Notify parent component about the change
+    if (onToggle) {
+      onToggle(isCollapsed)
+    }
+  }, [isCollapsed, onToggle])
 
   // Listen for changes to the profileImageTimestamp in localStorage
   useEffect(() => {
@@ -74,7 +85,7 @@ export default function Sidebar() {
       }
     }
 
-    // Check for changes every second (you could adjust this interval)
+    // Check for changes every second
     const interval = setInterval(handleStorageChange, 1000)
 
     // Add event listener for storage changes from other tabs
@@ -123,6 +134,11 @@ export default function Sidebar() {
     refreshUserData()
   }, [dispatch])
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [pathname])
+
   const handleLogout = async () => {
     try {
       await api.post("/auth/logout")
@@ -153,34 +169,35 @@ export default function Sidebar() {
     setIsCollapsed(!isCollapsed)
   }
 
-  const commonLinks = [{ href: "/dashboard", label: "Home", icon: <Home size={18} /> }]
+  const commonLinks = [{ href: "/dashboard", label: "Home", icon: <Home size={20} /> }]
 
   const ownerLinks = [
     ...commonLinks,
-    { href: "/employees", label: "Employees", icon: <Users size={18} /> },
-    { href: "/teams", label: "Teams", icon: <UserPlus size={18} /> },
-    { href: "/attendance", label: "Attendance", icon: <Clock size={18} /> },
-    { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={18} /> },
-    { href: "/announcements", label: "Announcement", icon: <Megaphone size={18} /> },
-    { href: "/analytics", label: "Analytics", icon: <TrendingUp size={18} /> },
-    { href: "/business-settings", label: "Business Settings", icon: <Settings size={18} /> },
-    { href: "/SalaryManagement", label: "Salary Management", icon: <Settings size={18} /> },
+    { href: "/employees", label: "Employees", icon: <Users size={20} /> },
+    { href: "/teams", label: "Teams", icon: <UserPlus size={20} /> },
+    { href: "/attendance", label: "Attendance", icon: <Clock size={20} /> },
+    { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
+    { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
+    { href: "/analytics", label: "Analytics", icon: <BarChart4 size={20} /> },
+    { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
+    { href: "/business-settings", label: "Business Settings", icon: <Settings size={20} /> },
   ]
 
   const hrLinks = [
     ...commonLinks,
-    { href: "/employees", label: "Employees", icon: <Users size={18} /> },
-    { href: "/teams", label: "Teams", icon: <UserPlus size={18} /> },
-    { href: "/attendance", label: "Attendance", icon: <Clock size={18} /> },
-    { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={18} /> },
-    { href: "/announcements", label: "Announcement", icon: <Megaphone size={18} /> },
+    { href: "/employees", label: "Employees", icon: <Users size={20} /> },
+    { href: "/teams", label: "Teams", icon: <UserPlus size={20} /> },
+    { href: "/attendance", label: "Attendance", icon: <Clock size={20} /> },
+    { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
+    { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
+    { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
   ]
 
   const employeeLinks = [
     ...commonLinks,
-    { href: "/attendance", label: "Attendance", icon: <Clock size={18} /> },
-    { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={18} /> },
-    { href: "/profile", label: "My Profile", icon: <UserCircle size={18} /> },
+    { href: "/attendance", label: "Attendance", icon: <Clock size={20} /> },
+    { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
+    { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
   ]
 
   let linksToRender = employeeLinks
@@ -194,164 +211,211 @@ export default function Sidebar() {
   }
 
   const getRoleColor = () => {
-    if (user?.role_id === 2) return "text-purple-600"
-    if (user?.role_id === 3) return "text-blue-600"
-    return "text-green-600"
+    if (user?.role_id === 2) return "bg-purple-100 text-purple-700"
+    if (user?.role_id === 3) return "bg-blue-100 text-blue-700"
+    return "bg-green-100 text-green-700"
   }
 
   return (
     <>
+      {/* Mobile menu button - visible on small screens */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg text-gray-700 hover:text-indigo-600 transition-colors"
+        aria-label="Toggle menu"
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
       <aside
         className={cn(
-          "h-screen bg-white flex flex-col transition-all duration-300 ease-in-out relative",
-          isCollapsed ? "w-16" : "w-64",
+          "h-screen fixed top-0 left-0 z-40 bg-white/95 backdrop-blur-sm flex flex-col transition-all duration-300 ease-in-out border-r border-gray-100/50 shadow-[0_0_15px_rgba(0,0,0,0.02)]",
+          isCollapsed ? "w-20" : "w-72",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
         {/* Toggle button */}
         <button
           onClick={toggleSidebar}
-          className="absolute -right-3 top-16 bg-white rounded-full p-1 shadow-md z-10 text-gray-500 hover:text-indigo-600 transition-colors"
+          className="hidden lg:flex absolute -right-3 top-20 bg-white rounded-full p-1.5 shadow-md z-10 text-gray-500 hover:text-indigo-600 transition-colors"
         >
           {isCollapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
         </button>
 
-        {/* Logo area */}
+        {/* Empty space before profile section */}
+        <div className="h-8"></div>
+
+        {/* Profile Block */}
         <div
           className={cn(
-            "flex items-center justify-center transition-all duration-300",
-            isCollapsed ? "py-4 px-0" : "py-6 px-4",
+            "mx-3 rounded-xl transition-all duration-300 cursor-pointer group hover:bg-gray-50/80",
+            isCollapsed ? "p-2" : "p-3",
+          )}
+          onClick={() => setOpenProfileModal(true)}
+        >
+          <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3")}>
+            <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white shadow-sm">
+              {imageError ? (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
+                  <UserCircle size={20} />
+                </div>
+              ) : (
+                <Image
+                  src={profileImageUrl || "/placeholder.svg"}
+                  alt={user?.name || "User"}
+                  width={40}
+                  height={40}
+                  className="h-full w-full object-cover"
+                  onError={handleImageError}
+                  unoptimized
+                />
+              )}
+            </div>
+            {!isCollapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{user?.name || "Username"}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  <span
+                    className={cn("text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block", getRoleColor())}
+                  >
+                    {getRoleName()}
+                  </span>
+                </div>
+                <ChevronRight
+                  size={16}
+                  className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-3 my-2"></div>
+
+        {/* Nav Links */}
+        <div className={cn("py-2 flex-1", isCollapsed ? "px-2" : "px-3")}>
+          {!isCollapsed && <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3 px-3">Menu</p>}
+          <nav className="space-y-1">
+            {linksToRender.map((link) => {
+              const isActive = pathname === link.href
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "flex items-center gap-3 py-2.5 rounded-xl text-sm font-medium transition-all relative group",
+                    isCollapsed ? "justify-center mx-auto w-12 h-12" : "px-3",
+                    isActive
+                      ? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 shadow-sm"
+                      : "text-gray-600 hover:bg-gray-50/80",
+                  )}
+                  title={isCollapsed ? link.label : undefined}
+                  onMouseEnter={() => setHoveredLink(link.href)}
+                  onMouseLeave={() => setHoveredLink(null)}
+                >
+                  <span
+                    className={cn(
+                      "flex items-center justify-center transition-all",
+                      isActive
+                        ? "text-indigo-600"
+                        : hoveredLink === link.href
+                          ? "text-indigo-500"
+                          : "text-gray-400 group-hover:text-indigo-500",
+                    )}
+                  >
+                    {link.icon}
+                  </span>
+
+                  {!isCollapsed && <span className="truncate">{link.label}</span>}
+
+                  {isActive && !isCollapsed && (
+                    <span className="absolute right-3 w-1 h-5 rounded-full bg-gradient-to-b from-indigo-600 to-purple-600" />
+                  )}
+
+                  {isActive && isCollapsed && (
+                    <span className="absolute -right-1 w-1 h-5 rounded-full bg-gradient-to-b from-indigo-600 to-purple-600" />
+                  )}
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+
+        {/* Logout - no space above */}
+        <div className="px-3">
+          <button
+            onClick={handleLogout}
+            className={cn(
+              "flex items-center gap-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full",
+              isCollapsed ? "justify-center px-0" : "px-3",
+              "text-gray-600 hover:bg-red-50 hover:text-red-600",
+            )}
+            title={isCollapsed ? "Logout" : undefined}
+          >
+            <span className={cn("text-gray-400 group-hover:text-red-500")}>
+              <LogOut size={20} />
+            </span>
+            {!isCollapsed && <span>Logout</span>}
+          </button>
+        </div>
+
+        {/* Big space between logout and logo */}
+        <div className="flex-grow min-h-[60px]"></div>
+
+        {/* Logo area at the bottom */}
+        <div
+          className={cn(
+            "flex items-center justify-center transition-all duration-300 pb-4",
+            isCollapsed ? "px-2" : "px-6",
           )}
         >
           {isCollapsed ? (
             logoIconError ? (
-              <div className="w-10 h-10 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 rounded-md bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold">
                 B
               </div>
             ) : (
-              <div className="w-12 h-12 relative flex items-center justify-center">
+              <div className="w-10 h-10 relative flex items-center justify-center">
                 <Image
                   src="/logopart.png"
                   alt="Beteamly Logo Icon"
-                  width={48}
-                  height={48}
-                  className="object-contain"
+                  width={40}
+                  height={40}
+                  className="object-contain hover:scale-105 transition-transform"
                   onError={handleLogoIconError}
                   unoptimized
                 />
               </div>
             )
           ) : logoError ? (
-            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Beteamly
             </h2>
           ) : (
-            <div className="h-12 w-full flex items-center justify-center">
+            <div className="h-12 relative flex items-center justify-center">
               <Image
                 src="/logo.png"
                 alt="Beteamly Logo"
-                width={200}
+                width={150}
                 height={48}
-                className="object-contain"
+                className="object-contain max-h-12 hover:scale-105 transition-transform"
                 onError={handleLogoError}
                 priority
                 unoptimized
               />
             </div>
           )}
-        </div>
-
-        <div className="flex-1 flex flex-col overflow-auto px-3">
-          {/* Profile Block */}
-          <div
-            className={cn("py-4 cursor-pointer group", isCollapsed ? "px-0" : "px-2")}
-            onClick={() => setOpenProfileModal(true)}
-          >
-            <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3")}>
-              <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-50">
-                {imageError ? (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
-                    <UserCircle size={20} />
-                  </div>
-                ) : (
-                  <Image
-                    src={profileImageUrl || "/placeholder.svg"}
-                    alt={user?.name || "User"}
-                    width={40}
-                    height={40}
-                    className="h-full w-full object-cover"
-                    onError={handleImageError}
-                    unoptimized
-                  />
-                )}
-              </div>
-              {!isCollapsed && (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{user?.name || "Username"}</p>
-                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                    <p className={cn("text-xs font-medium", getRoleColor())}>{getRoleName()}</p>
-                  </div>
-                  <ChevronRight
-                    size={16}
-                    className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  />
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Nav Links */}
-          <div className="py-6">
-            {!isCollapsed && (
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-2">Navigation</p>
-            )}
-            <nav className="space-y-1">
-              {linksToRender.map((link) => {
-                const isActive = pathname === link.href
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "flex items-center gap-3 py-2.5 rounded-md text-sm font-medium transition-all",
-                      isCollapsed ? "justify-center px-0" : "px-3",
-                      isActive ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
-                    )}
-                    title={isCollapsed ? link.label : undefined}
-                  >
-                    <span
-                      className={cn("flex items-center justify-center", isActive ? "text-indigo-600" : "text-gray-400")}
-                    >
-                      {link.icon}
-                    </span>
-                    {!isCollapsed && (
-                      <>
-                        <span>{link.label}</span>
-                        {isActive && <span className="ml-auto w-1 h-1 rounded-full bg-indigo-600" />}
-                      </>
-                    )}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-        </div>
-
-        {/* Logout */}
-        <div className={cn("p-3", isCollapsed ? "flex justify-center" : "px-5")}>
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "flex items-center gap-3 py-2.5 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors",
-              isCollapsed ? "justify-center px-0 w-10" : "px-3 w-full",
-            )}
-            title={isCollapsed ? "Logout" : undefined}
-          >
-            <span className="text-gray-400">
-              <LogOut size={18} />
-            </span>
-            {!isCollapsed && <span>Logout</span>}
-          </button>
         </div>
       </aside>
 
