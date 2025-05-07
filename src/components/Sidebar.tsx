@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useDispatch, useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
-import { logout } from "@/lib/redux/slices/authSlice"
+import { logout, updateUser } from "@/lib/redux/slices/authSlice"
 import api from "@/lib/api"
 
 import {
@@ -20,7 +20,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  UserPlus ,
+  UserPlus,
 } from "lucide-react"
 
 import Image from "next/image"
@@ -44,12 +44,19 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [logoError, setLogoError] = useState(false)
   const [logoIconError, setLogoIconError] = useState(false)
+  const [imageTimestamp, setImageTimestamp] = useState<string>("")
 
   // Effect to load collapsed state from localStorage
   useEffect(() => {
     const savedState = localStorage.getItem("sidebarCollapsed")
     if (savedState !== null) {
       setIsCollapsed(savedState === "true")
+    }
+
+    // Get the image timestamp if it exists
+    const timestamp = localStorage.getItem("profileImageTimestamp")
+    if (timestamp) {
+      setImageTimestamp(timestamp)
     }
   }, [])
 
@@ -58,22 +65,63 @@ export default function Sidebar() {
     localStorage.setItem("sidebarCollapsed", isCollapsed.toString())
   }, [isCollapsed])
 
-  // Effect to update profile image when user data changes
+  // Listen for changes to the profileImageTimestamp in localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newTimestamp = localStorage.getItem("profileImageTimestamp")
+      if (newTimestamp && newTimestamp !== imageTimestamp) {
+        setImageTimestamp(newTimestamp)
+      }
+    }
+
+    // Check for changes every second (you could adjust this interval)
+    const interval = setInterval(handleStorageChange, 1000)
+
+    // Add event listener for storage changes from other tabs
+    window.addEventListener("storage", handleStorageChange)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("storage", handleStorageChange)
+    }
+  }, [imageTimestamp])
+
+  // Effect to update profile image when user data or timestamp changes
   useEffect(() => {
     if (user?.profile_img) {
       setImageError(false)
 
+      // Add timestamp to force refresh if available
+      const timestamp = imageTimestamp || Date.now().toString()
+
       // Check if the URL is already absolute (starts with http or https)
       if (user.profile_img.startsWith("http")) {
-        setProfileImageUrl(user.profile_img)
+        // For absolute URLs, add a query parameter to force refresh
+        const separator = user.profile_img.includes("?") ? "&" : "?"
+        setProfileImageUrl(`${user.profile_img}${separator}t=${timestamp}`)
       } else {
         // If it's a relative URL, make sure it's properly formatted
-        setProfileImageUrl(user.profile_img.startsWith("/") ? user.profile_img : `/${user.profile_img}`)
+        const formattedUrl = user.profile_img.startsWith("/") ? user.profile_img : `/${user.profile_img}`
+        setProfileImageUrl(`${formattedUrl}?t=${timestamp}`)
       }
     } else {
       setProfileImageUrl("/profile.png")
     }
-  }, [user])
+  }, [user, imageTimestamp])
+
+  // Refresh user data when component mounts to ensure we have the latest profile image
+  useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        const res = await api.get("/users/me")
+        dispatch(updateUser(res.data))
+      } catch (error) {
+        console.error("Failed to refresh user data:", error)
+      }
+    }
+
+    refreshUserData()
+  }, [dispatch])
 
   const handleLogout = async () => {
     try {
@@ -118,7 +166,7 @@ export default function Sidebar() {
     { href: "/business-settings", label: "Business Settings", icon: <Settings size={18} /> },
     { href: "/SalaryManagement", label: "Salary Management", icon: <Settings size={18} /> },
   ]
-  
+
   const hrLinks = [
     ...commonLinks,
     { href: "/employees", label: "Employees", icon: <Users size={18} /> },

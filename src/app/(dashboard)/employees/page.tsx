@@ -1,47 +1,60 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import api from '@/lib/api'
-import { toast } from 'react-toastify'
-import InviteForm from '@/components/InviteForm'
-import EmployeeTable from '@/components/EmployeeTable'
-import InvitedTable from '@/components/InvitedTable'
-import { Users, UserPlus, Mail } from 'lucide-react'
+import { useEffect, useState } from "react"
+import api from "@/lib/api"
+import { toast } from "react-toastify"
+import InviteForm from "@/components/employees/InviteForm"
+import EmployeeTable from "@/components/employees/EmployeeTable"
+import InvitedTable from "@/components/employees/InvitedTable"
+import { Users, UserPlus, Mail, Search } from "lucide-react"
 
 export default function EmployeesPage() {
   const [users, setUsers] = useState([])
   const [invites, setInvites] = useState([])
   const [reload, setReload] = useState(false)
-  const [activeTab, setActiveTab] = useState<'employees' | 'invited' | 'inviteForm'>('employees')
+  const [activeTab, setActiveTab] = useState<"employees" | "invited" | "inviteForm">("employees")
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const fetchData = () => {
+    setLoading(true)
+
+    Promise.all([
+      api.get("/users").then((res) => setUsers(res.data)),
+      api.get("/employee-invites").then((res) => setInvites(res.data)),
+    ])
+      .catch(() => toast.error("Failed to load data"))
+      .finally(() => setLoading(false))
+  }
 
   useEffect(() => {
-    setLoading(true)
-    
-    Promise.all([
-      api.get('/users').then((res) => setUsers(res.data)),
-      api.get('/employee-invites').then((res) => setInvites(res.data))
-    ])
-      .catch(() => toast.error('Failed to load data'))
-      .finally(() => setLoading(false))
+    fetchData()
   }, [reload])
 
   const handleRefresh = () => {
     setReload(!reload)
+    // Go back to invited tab after successful invite
+    setActiveTab("invited")
   }
 
+  const filteredInvites = invites.filter(
+    (invite: any) =>
+      invite.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invite.email?.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
   return (
-    <main className="p-6 md:p-8 min-h-screen bg-gray-50 text-gray-900">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+    <main className="min-h-screen bg-[#FAF9F7] text-gray-900">
+      <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
+        <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Manage Employees</h1>
-            <p className="text-gray-500 mt-1">Add, edit and manage your organization's employees</p>
+            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Manage Employees</h1>
+            <p className="mt-1 text-gray-500">Add, edit and manage your organization's employees</p>
           </div>
-          
+
           <button
-            onClick={() => setActiveTab('inviteForm')}
-            className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            onClick={() => setActiveTab("inviteForm")}
+            className="inline-flex items-center rounded-lg bg-[#6148F4] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#5040d3] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/50 focus:ring-offset-2"
           >
             <UserPlus size={18} className="mr-2" />
             Invite Employee
@@ -52,45 +65,57 @@ export default function EmployeesPage() {
         <div className="mb-6 border-b border-gray-200">
           <nav className="-mb-px flex space-x-6" aria-label="Tabs">
             <button
-              onClick={() => setActiveTab('employees')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'employees'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              onClick={() => setActiveTab("employees")}
+              className={`flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors ${
+                activeTab === "employees"
+                  ? "border-[#6148F4] text-[#6148F4]"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
               }`}
             >
-              <div className="flex items-center">
-                <Users size={18} className="mr-2" />
-                All Employees
-              </div>
+              <Users size={18} className="mr-2" />
+              All Employees
             </button>
             <button
-              onClick={() => setActiveTab('invited')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'invited'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              onClick={() => setActiveTab("invited")}
+              className={`flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors ${
+                activeTab === "invited"
+                  ? "border-[#6148F4] text-[#6148F4]"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
               }`}
             >
-              <div className="flex items-center">
-                <Mail size={18} className="mr-2" />
-                Invited Employees
-              </div>
+              <Mail size={18} className="mr-2" />
+              Invited Employees
             </button>
           </nav>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 shadow-sm transition-all focus:border-[#6148F4] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/20"
+            />
+          </div>
         </div>
 
         {/* Tab Content */}
         <div className="mt-6">
           {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="flex h-64 items-center justify-center">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#6148F4] border-t-transparent"></div>
             </div>
           ) : (
             <>
-              {activeTab === 'employees' && <EmployeeTable />}
-              {activeTab === 'invited' && <InvitedTable invites={invites} />}
-              {activeTab === 'inviteForm' && <InviteForm onSuccess={handleRefresh} />}
+              {activeTab === "employees" && <EmployeeTable searchTerm={searchTerm} />}
+              {activeTab === "invited" && <InvitedTable invites={filteredInvites} onInviteDeleted={fetchData} />}
+              {activeTab === "inviteForm" && <InviteForm onSuccess={handleRefresh} />}
             </>
           )}
         </div>
