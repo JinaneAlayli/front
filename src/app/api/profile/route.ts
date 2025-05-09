@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to the backend API
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me`
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/users/me`
 
     const response = await fetch(apiUrl, {
       method: "PATCH", // Use PATCH on the server side
