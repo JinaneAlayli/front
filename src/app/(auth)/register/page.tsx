@@ -1,7 +1,7 @@
 "use client"
  export const dynamic = 'force-dynamic'
 import type React from "react"
-
+import { Suspense } from "react"
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "react-toastify"
@@ -113,6 +113,7 @@ export default function RegisterPage() {
   }
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <main className="flex min-h-screen items-center justify-center bg-[#FAF9F7] p-4 md:p-6">
       <div className="w-full max-w-md">
         <div className="overflow-hidden rounded-xl bg-white shadow-lg">
@@ -230,5 +231,6 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+    </Suspense>
   )
 }
