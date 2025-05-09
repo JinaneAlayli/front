@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import {
   Mail,
-  UserPlus,
   Trash2,
   LinkIcon,
   Copy,
@@ -81,9 +80,16 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
     if (statusFilter === "all") return true
     if (statusFilter === "pending") return !invite.accepted && !isExpired(invite)
     if (statusFilter === "done") return invite.accepted
-    if (statusFilter === "expired") return isExpired(invite)
+    // Fixed: Only show expired invitations that haven't been accepted yet
+    if (statusFilter === "expired") return isExpired(invite) && !invite.accepted
     return true
   })
+
+  // Count invites by status - also update the counts to match the new filter logic
+  const pendingCount = invites.filter((invite) => !invite.accepted && !isExpired(invite)).length
+  const doneCount = invites.filter((invite) => invite.accepted).length
+  // Update expired count to only count those that are expired but not accepted
+  const expiredCount = invites.filter((invite) => isExpired(invite) && !invite.accepted).length
 
   // Handle invitation deletion
   const handleDelete = async (id: number) => {
@@ -119,11 +125,6 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
   const getRegistrationLink = (token: string) => {
     return `${process.env.NEXT_PUBLIC_FRONTEND_URL || window.location.origin}/register?token=${token}`
   }
-
-  // Count invites by status
-  const pendingCount = invites.filter((invite) => !invite.accepted && !isExpired(invite)).length
-  const doneCount = invites.filter((invite) => invite.accepted).length
-  const expiredCount = invites.filter((invite) => isExpired(invite)).length
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
@@ -218,7 +219,6 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
           <tbody className="divide-y divide-gray-200">
             {filteredInvites.map((invite) => (
               <tr key={invite.id} className="transition-colors hover:bg-gray-50">
-              
                 <td className="whitespace-nowrap px-6 py-4">
                   <div className="flex items-center text-sm">
                     <Mail size={14} className="mr-1.5 text-gray-400" />

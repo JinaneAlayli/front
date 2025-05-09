@@ -105,6 +105,13 @@ export default function NotificationSystem() {
   const fetchNotifications = async () => {
     if (!user) return
 
+    // Skip fetching for users with role_id === 1
+    if (user.role_id === 1) {
+      setNotifications([])
+      setIsLoading(false)
+      return
+    }
+
     // If we've already determined we need to use mock data, don't try the API again
     if (useMockData) {
       loadMockNotifications()
@@ -166,12 +173,14 @@ export default function NotificationSystem() {
   }
 
   useEffect(() => {
-    fetchNotifications()
+    // Only fetch notifications if user exists and is not role_id 1
+    if (user && user.role_id !== 1) {
+      fetchNotifications()
 
-    // Poll for new notifications every 2 minutes (reduced from 1 minute to reduce API load)
-    const interval = setInterval(fetchNotifications, 120000)
-
-    return () => clearInterval(interval)
+      // Poll for new notifications every 2 minutes (reduced from 1 minute to reduce API load)
+      const interval = setInterval(fetchNotifications, 120000)
+      return () => clearInterval(interval)
+    }
   }, [user])
 
   useEffect(() => {

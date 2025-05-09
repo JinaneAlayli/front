@@ -8,7 +8,7 @@ import type { RootState } from "@/lib/redux/store"
 import { Megaphone, Search, Plus, Filter, Edit, Trash2, Calendar, Users } from "lucide-react"
 import AnnouncementModal from "@/components/announcements/AnnouncementModal"
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal"
-
+import RoleGuard from "@/components/RoleGuard"
 interface Announcement {
   id: number
   title: string
@@ -99,10 +99,18 @@ export default function AnnouncementsPage() {
       setIsLoading(false)
     }
   }
+  
 
   useEffect(() => {
+  if (user && [2, 3, 4, 5].includes(user.role_id)) {
     fetchAnnouncements()
-  }, [])
+  }
+  else{
+    if (user?.role_id === 1) {
+    toast.error("Superadmin is not allowed to view announcements.")
+   }
+  }
+}, [user])
 
   useEffect(() => {
     let filtered = [...announcements]
@@ -210,6 +218,7 @@ export default function AnnouncementsPage() {
 
 
   return (
+    <RoleGuard allowedRoles={[2, 3, 4,5]}>
     <div className="flex flex-col min-h-screen">
 
       <main className="flex-1 bg-[#FAF9F7] p-4 md:p-6 lg:p-8">
@@ -455,5 +464,6 @@ export default function AnnouncementsPage() {
         endpoint="/announcements"
       />
     </div>
+    </RoleGuard>
   )
 }

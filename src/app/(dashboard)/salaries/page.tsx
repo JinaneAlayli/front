@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSelector } from "react-redux"
+import { useState, useEffect,useRef } from "react"
+import { useRouter } from "next/navigation"
+ import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import SalaryTable from "@/components/salaries/SalaryTable"
@@ -13,6 +14,9 @@ import { toast } from "react-toastify"
 import { PlusCircle, FileText, Filter, DollarSign, Calendar, Users, ChevronDown } from "lucide-react"
 
 export default function SalariesPage() {
+
+  const router = useRouter()
+const hasBlocked  = useRef(false)
   const { user } = useSelector((state: RootState) => state.auth)
   const [salaries, setSalaries] = useState<
     Array<{
@@ -94,12 +98,19 @@ export default function SalariesPage() {
       setLoading(false)
     }
   }
+useEffect(() => {
+  if (!user || hasBlocked.current) return
 
-  useEffect(() => {
-    if (user) {
-      fetchSalaries()
-    }
-  }, [user, isManager])
+  if (user.role_id === 1) {
+    hasBlocked.current = true
+    toast.error("Superadmin is not allowed to view salaries.")
+    router.push("/dashboard")
+    return
+  }
+
+  fetchSalaries()
+}, [user])
+
 
   const handleCreate = () => {
     setEditingSalary(null)

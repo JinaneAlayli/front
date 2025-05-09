@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState,useRef } from "react"
 import api from "@/lib/api"
 import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
@@ -10,10 +10,14 @@ import EmployeeTasksView from "@/components/tasks/EmployeeTasksView"
 import TaskFormModal from "@/components/tasks/TaskFormModal"
 import { PlusCircle, ClipboardList, Search, Filter, LayoutGrid, List } from "lucide-react"
 import { toast } from "react-toastify"
-
+import { useRouter } from "next/navigation"
 export default function TasksPage() {
   const user = useSelector((state: RootState) => state.auth.user)
   const [tasks, setTasks] = useState([])
+
+  const router = useRouter()
+  const hasBlocked = useRef(false)
+
   const [openModal, setOpenModal] = useState(false)
   const [editingTask, setEditingTask] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -41,9 +45,18 @@ export default function TasksPage() {
     }
   }
 
-  useEffect(() => {
-    fetchTasks()
-  }, [])
+ useEffect(() => {
+  if (!user || hasBlocked.current) return
+
+  if (user.role_id === 1) {
+    hasBlocked.current = true
+    toast.error("Superadmin is not allowed to view tasks.")
+    router.push("/dashboard")
+    return
+  }
+
+  fetchTasks()
+}, [user])
 
   const handleCreate = () => {
     setEditingTask(null)

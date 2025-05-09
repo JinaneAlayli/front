@@ -91,7 +91,7 @@ export default function RegisterPage() {
 
   const getRoleName = () => {
     if (!invite) return "Employee"
-    return invite.role_id === 2 ? "HR" : invite.role_id === 3 ? "Team Leader" : "Employee"
+    return invite.role_id === 3 ? "HR" : invite.role_id === 4 ? "Team Leader" : "Employee"
   }
 
   if (isLoading) {
@@ -143,7 +143,7 @@ export default function RegisterPage() {
                   type="text"
                   value={form.name}
                   onChange={handleInputChange}
-                  placeholder="John Doe"
+                  placeholder="John"
                   required
                   className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-[#6148F4] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/50"
                 />

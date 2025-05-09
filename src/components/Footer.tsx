@@ -1,138 +1,83 @@
+"use client"
+
 import Link from "next/link"
-import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin, ArrowUp } from "lucide-react"
 
 export default function Footer() {
   return (
-    <footer className="px-20 bg-gray-900 text-gray-300">
-      <div className="container mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Company Info */}
-          <div>
-            <h3 className="text-xl font-bold text-white mb-4">Beteamly</h3>
-            <p className="mb-4">
+    <footer className="bg-gray-900 text-gray-300">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {/* Brand Section */}
+          <div className="space-y-4">
+            <h3 className="text-2xl font-bold text-white">Beteamly</h3>
+            <p className="text-gray-400 max-w-md">
               Simplifying HR management for businesses of all sizes with our comprehensive suite of tools.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Facebook size={20} />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Twitter size={20} />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Linkedin size={20} />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Instagram size={20} />
-              </a>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold text-white">Quick Links</h4>
+            <div className="flex flex-col space-y-2">
+              <Link
+                href="/about"
+                className="text-gray-400 hover:text-[#6148F4] transition-colors inline-flex items-center"
+              >
+                <span className="border-b border-transparent hover:border-[#6148F4]">About</span>
+              </Link>
+              <Link
+                href="/pricing"
+                className="text-gray-400 hover:text-[#6148F4] transition-colors inline-flex items-center"
+              >
+                <span className="border-b border-transparent hover:border-[#6148F4]">Pricing</span>
+              </Link>
+              <Link
+                href="/login"
+                className="text-gray-400 hover:text-[#6148F4] transition-colors inline-flex items-center"
+              >
+                <span className="border-b border-transparent hover:border-[#6148F4]">Login</span>
+              </Link>
             </div>
           </div>
 
-          {/* Products */}
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Products</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/products/attendance" className="hover:text-white transition-colors">
-                  Attendance Management
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/payroll" className="hover:text-white transition-colors">
-                  Payroll System
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/performance" className="hover:text-white transition-colors">
-                  Performance Tracking
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/recruitment" className="hover:text-white transition-colors">
-                  Recruitment & Onboarding
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/training" className="hover:text-white transition-colors">
-                  Training Management
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Company</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/about" className="hover:text-white transition-colors">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/careers" className="hover:text-white transition-colors">
-                  Careers
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="hover:text-white transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="hover:text-white transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-white transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Contact Us</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start">
-                <MapPin className="mr-2 h-5 w-5 text-indigo-400 flex-shrink-0 mt-0.5" />
-                <span>123 Business Avenue, Tech City, 10001</span>
-              </li>
-              <li className="flex items-center">
-                <Phone className="mr-2 h-5 w-5 text-indigo-400 flex-shrink-0" />
-                <span>+1 (555) 123-4567</span>
-              </li>
-              <li className="flex items-center">
-                <Mail className="mr-2 h-5 w-5 text-indigo-400 flex-shrink-0" />
-                <span>contact@beteamly.com</span>
-              </li>
-            </ul>
+          {/* Contact Information */}
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold text-white">Contact Us</h4>
+            <div className="flex flex-col space-y-3">
+              <a
+                href="mailto:jinanealayli@gmail.com"
+                className="text-gray-400 hover:text-[#6148F4] transition-colors flex items-center gap-2 group"
+              >
+                <Mail className="h-5 w-5 text-[#6148F4] group-hover:text-[#4ADE80] transition-colors" />
+                <span>jinanealayli@gmail.com</span>
+              </a>
+              <a
+                href="tel:+96170298529"
+                className="text-gray-400 hover:text-[#6148F4] transition-colors flex items-center gap-2 group"
+              >
+                <Phone className="h-5 w-5 text-[#6148F4] group-hover:text-[#4ADE80] transition-colors" />
+                <span>+96170298529</span>
+              </a>
+              <div className="text-gray-400 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-[#6148F4]" />
+                <span>Lebanon</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p>&copy; {new Date().getFullYear()} Beteamly. All rights reserved.</p>
-          <div className="mt-4 md:mt-0">
-            <ul className="flex space-x-6">
-              <li>
-                <Link href="/privacy" className="text-sm hover:text-white transition-colors">
-                  Privacy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="text-sm hover:text-white transition-colors">
-                  Terms
-                </Link>
-              </li>
-              <li>
-                <Link href="/cookies" className="text-sm hover:text-white transition-colors">
-                  Cookies
-                </Link>
-              </li>
-            </ul>
-          </div>
+        <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Beteamly. All rights reserved.</p>
+
+          {/* Back to top button */}
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="mt-4 md:mt-0 flex items-center gap-1 text-sm text-gray-400 hover:text-[#6148F4] transition-colors group"
+          >
+            <span>Back to top</span>
+            <ArrowUp className="h-4 w-4 group-hover:transform group-hover:-translate-y-1 transition-transform" />
+          </button>
         </div>
       </div>
     </footer>

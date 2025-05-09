@@ -156,12 +156,7 @@ export default function BusinessSettingsPage() {
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
               <div className="flex items-center">
-                <Link
-                  href="/"
-                  className="mr-3 rounded-full p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
-                >
-                  <ArrowLeft size={18} />
-                </Link>
+               
                 <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Business Settings</h1>
               </div>
               <p className="mt-1 text-gray-500">

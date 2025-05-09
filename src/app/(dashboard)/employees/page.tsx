@@ -1,21 +1,29 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState,useRef } from "react"
 import api from "@/lib/api"
 import { toast } from "react-toastify"
 import InviteForm from "@/components/employees/InviteForm"
 import EmployeeTable from "@/components/employees/EmployeeTable"
 import InvitedTable from "@/components/employees/InvitedTable"
 import { Users, UserPlus, Mail, Search } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useSelector } from "react-redux"
+import type { RootState } from "@/lib/redux/store"
 
 export default function EmployeesPage() {
+
+const user = useSelector((state: RootState) => state.auth.user)
+const router = useRouter()
+
+
   const [users, setUsers] = useState([])
   const [invites, setInvites] = useState([])
   const [reload, setReload] = useState(false)
   const [activeTab, setActiveTab] = useState<"employees" | "invited" | "inviteForm">("employees")
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-
+const hasRedirected = useRef(false)
   const fetchData = () => {
     setLoading(true)
 
@@ -27,9 +35,19 @@ export default function EmployeesPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => {
+useEffect(() => {
+  if (user && ![2, 3].includes(user.role_id) && !hasRedirected.current) {
+    hasRedirected.current = true
+    toast.error("Only company owners and HR can manage employees.")
+    router.push("/dashboard")
+    return
+  }
+
+  if (user && [2, 3].includes(user.role_id)) {
     fetchData()
-  }, [reload])
+  }
+}, [user])
+
 
   const handleRefresh = () => {
     setReload(!reload)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect,useRef } from "react"
 import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import api from "@/lib/api"
@@ -8,8 +8,10 @@ import { toast } from "react-toastify"
 import LeaveRequestForm from "@/components/leave-requests/LeaveRequestForm"
 import LeaveRequestList from "@/components/leave-requests/LeaveRequestList"
 import { PlusCircle, Calendar, Filter } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function LeaveRequestsPage() {
+  const router = useRouter()
   const user = useSelector((state: RootState) => state.auth.user)
   const [leaveRequests, setLeaveRequests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -35,10 +37,14 @@ export default function LeaveRequestsPage() {
       setLoading(false)
     }
   }
-
+const hasRedirected = useRef(false)
   useEffect(() => {
-    fetchLeaveRequests()
-  }, [])
+    if (user?.role_id === 1 && !hasRedirected.current) {
+      hasRedirected.current = true
+      toast.error("Superadmin is not allowed to access leave requests.")
+      router.push("/dashboard")
+    }
+  }, [user])
 
   const handleCreateSuccess = () => {
     setOpenModal(false)

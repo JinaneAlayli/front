@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { toast } from "react-toastify"
 import api from "@/lib/api"
-import { X, AlertTriangle } from "lucide-react"
+import { X, AlertTriangle } from 'lucide-react'
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean
@@ -13,6 +13,7 @@ interface DeleteConfirmationModalProps {
   message: string
   itemId?: number
   endpoint: string
+  successMessage?: string
 }
 
 export default function DeleteConfirmationModal({
@@ -23,6 +24,7 @@ export default function DeleteConfirmationModal({
   message,
   itemId,
   endpoint,
+  successMessage = "Item deleted successfully"
 }: DeleteConfirmationModalProps) {
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -32,7 +34,7 @@ export default function DeleteConfirmationModal({
     setIsDeleting(true)
     try {
       await api.delete(`${endpoint}/${itemId}`)
-      toast.success("Item deleted successfully")
+      toast.success(successMessage)
       onConfirm()
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to delete item")

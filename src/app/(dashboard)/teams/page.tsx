@@ -8,6 +8,11 @@ import TeamTable from "@/components/teams/TeamTable"
 import { Search } from "lucide-react"
 import EditTeamForm from "@/components/teams/EditTeamForm"
 import DeleteTeamConfirmation from "@/components/DeleteTeamConfirmation"
+import { useRef } from "react"
+import { useRouter } from "next/navigation"
+import { useSelector } from "react-redux"
+import type { RootState } from "@/lib/redux/store"
+
 
 interface TeamMember {
   id: number
@@ -31,7 +36,11 @@ export default function TeamsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null)
+  
+const user = useSelector((state: RootState) => state.auth.user)
 
+const router = useRouter()
+const hasBlocked = useRef(false)
   // Function to load team members for a specific team
   const loadTeamMembers = async (teamId: number): Promise<TeamMember[]> => {
     try {
@@ -43,43 +52,46 @@ export default function TeamsPage() {
     }
   }
 
-  useEffect(() => {
-    const fetchTeamsAndMembers = async () => {
-      setLoading(true)
-      try {
-        // First, fetch all teams
-        const teamsResponse = await api.get("/teams")
-        const fetchedTeams = teamsResponse.data || []
-
-        // Then, fetch members for each team in parallel
-        const teamsWithMembers = await Promise.all(
-          fetchedTeams.map(async (team: Team) => {
-            // If team already has members, use them
-            if (team.members && team.members.length > 0) {
-              return team
-            }
-
-            // Otherwise, fetch members
-            const members = await loadTeamMembers(team.id)
-            return {
-              ...team,
-              members,
-            }
-          }),
-        )
-
-        setTeams(teamsWithMembers)
-      } catch (error) {
-        console.error("Failed to load teams:", error)
-        toast.error("Failed to load teams")
-        setTeams([])
-      } finally {
-        setLoading(false)
-      }
+ 
+useEffect(() => {
+  if (!user) return
+ 
+  if (user.role_id === 1) {
+    if (!hasBlocked.current) {
+      hasBlocked.current = true
+      toast.error("Superadmin is not allowed to view teams.")
+      router.push("/dashboard")
     }
+    return
+  }
 
-    fetchTeamsAndMembers()
-  }, [reload])
+  const fetchTeamsAndMembers = async () => {
+    setLoading(true)
+    try {
+      const teamsResponse = await api.get("/teams")
+      const fetchedTeams = teamsResponse.data || []
+
+      const teamsWithMembers = await Promise.all(
+        fetchedTeams.map(async (team: Team) => {
+          if (team.members?.length) return team
+          const members = await loadTeamMembers(team.id)
+          return { ...team, members }
+        })
+      )
+
+      setTeams(teamsWithMembers)
+    } catch (error) {
+      console.error("Failed to load teams:", error)
+      toast.error("Failed to load teams")
+      setTeams([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchTeamsAndMembers()
+}, [reload, user])
+
 
   const handleRefresh = () => {
     setReload(!reload)

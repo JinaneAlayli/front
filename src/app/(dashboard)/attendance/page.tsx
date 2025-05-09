@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect,useRef  } from "react"
 import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import ProtectedRoute from "@/components/ProtectedRoute"
@@ -11,6 +11,8 @@ import api from "@/lib/api"
 import { toast } from "react-toastify"
 import { Users, BarChart3, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+ import { useRouter } from "next/navigation"
+
 
 export default function AttendancePage() {
   const { user } = useSelector((state: RootState) => state.auth)
@@ -19,10 +21,10 @@ export default function AttendancePage() {
   const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState("records")
 
-  // Check if user is HR or owner (can view all records)
+const router = useRouter()
   const isManager = user?.role_id === 2 || user?.role_id === 3
-  // Check if user is a team leader
-  const isLeader = user?.role_id === 4
+  const hasShownToast = useRef(false)
+  const isLeader = user?.role_id === 4 
 
   const fetchAttendanceRecords = async () => {
     setLoading(true)
@@ -30,10 +32,11 @@ export default function AttendancePage() {
     try {
       // Use the only available endpoint for attendance records
       const res = await api.get("/attendance")
+ 
+      const filteredRecords = isManager
+  ? res.data
+  : res.data.filter((record: any) => record.user_id === user?.id)
 
-      // If the user is not a manager or leader, filter the records to show only their own
-      const filteredRecords =
-        isManager || isLeader ? res.data : res.data.filter((record: any) => record.user_id === user?.id)
 
       setAttendanceRecords(filteredRecords)
     } catch (error: any) {
@@ -57,12 +60,18 @@ export default function AttendancePage() {
     }
   }
 
-  useEffect(() => {
-    if (user) {
-      fetchAttendanceRecords()
-    }
-  }, [user])
+useEffect(() => {
+  if (user?.role_id === 1 && !hasShownToast.current) {
+    hasShownToast.current = true
+    toast.error("Superadmin is not allowed to view attendance.")
+    router.push("/dashboard")
+    return
+  }
 
+  if (user?.role_id !== 1) {
+    fetchAttendanceRecords()
+  }
+}, [user])
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-[#FAF9F7] text-gray-900">
@@ -70,12 +79,7 @@ export default function AttendancePage() {
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
               <div className="flex items-center">
-                <Link
-                  href="/"
-                  className="mr-3 rounded-full p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
-                >
-                  <ArrowLeft size={18} />
-                </Link>
+               
                 <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Attendance Records</h1>
               </div>
               <p className="mt-1 text-gray-500">
