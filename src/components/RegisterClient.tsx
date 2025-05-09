@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "react-toastify"
 import api from "@/lib/api"
@@ -19,7 +19,8 @@ type FormData = {
   password: string
 }
 
-export default function RegisterClient() {
+// Create a wrapper component that uses useSearchParams
+function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
@@ -229,5 +230,20 @@ export default function RegisterClient() {
         </div>
       </div>
     </main>
+  )
+}
+
+// Main component with Suspense boundary
+export default function RegisterClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#6148F4] border-t-transparent"></div>
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   )
 }
