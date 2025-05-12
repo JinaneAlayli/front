@@ -33,7 +33,7 @@ export default function HomePage() {
               </Link>
             ) : (
               <Link
-                href="/login"
+                href="/pricing"
                 className="inline-block bg-[#4ADE80] text-black px-6 py-3 rounded-md font-medium shadow-sm hover:opacity-90 transition"
               >
                 Get Started
@@ -101,7 +101,7 @@ export default function HomePage() {
             ) : (
               <button
                 className="bg-[#4ADE80] text-black px-6 py-3 rounded-md font-medium shadow-sm hover:opacity-90 transition"
-                onClick={() => router.push("/login")}
+                
               >
                 See a Demo
               </button>

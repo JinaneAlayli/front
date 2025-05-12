@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, MoreVertical } from "lucide-react"
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, MoreVertical, Edit } from "lucide-react"
 
 interface LeaveRequestCardProps {
   request: any
@@ -9,6 +9,8 @@ interface LeaveRequestCardProps {
   isOwner: boolean
   onStatusUpdate: (id: number, status: string) => void
   onCancel: (id: number) => void
+  onDelete?: (id: number) => void
+  onEdit?: (request: any) => void
 }
 
 export default function LeaveRequestCard({
@@ -17,9 +19,12 @@ export default function LeaveRequestCard({
   isOwner,
   onStatusUpdate,
   onCancel,
+  onDelete,
+  onEdit,
 }: LeaveRequestCardProps) {
   const [showActions, setShowActions] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   // Function to format date
   const formatDate = (dateString: string) => {
@@ -30,8 +35,14 @@ export default function LeaveRequestCard({
 
   // Calculate the number of days
   const calculateDays = () => {
+    if (!request.start_date || !request.end_date) return 0
+
     const start = new Date(request.start_date)
     const end = new Date(request.end_date)
+
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
+
     const diffTime = Math.abs(end.getTime() - start.getTime())
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // Include both start and end days
 
@@ -39,6 +50,7 @@ export default function LeaveRequestCard({
   }
 
   const days = calculateDays()
+  const canEdit = isOwner && request.status === "pending"
 
   // Function to get status badge
   const getStatusBadge = () => {
@@ -98,7 +110,7 @@ export default function LeaveRequestCard({
       default:
         return (
           <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-            Other
+            {request.type}
           </span>
         )
     }
@@ -109,6 +121,10 @@ export default function LeaveRequestCard({
     try {
       if (action === "cancel") {
         await onCancel(request.id)
+      } else if (action === "delete") {
+        await onDelete?.(request.id)
+      } else if (action === "edit") {
+        onEdit?.(request)
       } else {
         await onStatusUpdate(request.id, action)
       }
@@ -116,6 +132,18 @@ export default function LeaveRequestCard({
       setProcessing(false)
       setShowActions(false)
     }
+  }
+
+  // Close dropdown when clicking outside
+  const handleClickOutside = (e: MouseEvent) => {
+    if (showActions) {
+      setShowActions(false)
+    }
+  }
+
+  // Add event listener when dropdown is open
+  if (showActions) {
+    document.addEventListener("click", handleClickOutside, { once: true })
   }
 
   return (
@@ -159,8 +187,12 @@ export default function LeaveRequestCard({
 
         <div className="relative">
           <button
-            onClick={() => setShowActions(!showActions)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowActions(!showActions)
+            }}
             className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Actions"
           >
             <MoreVertical size={16} />
           </button>
@@ -170,7 +202,10 @@ export default function LeaveRequestCard({
               {isManager && request.status === "pending" && (
                 <>
                   <button
-                    onClick={() => handleAction("approved")}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleAction("approved")
+                    }}
                     disabled={processing}
                     className="flex w-full items-center px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50"
                   >
@@ -178,7 +213,10 @@ export default function LeaveRequestCard({
                     Approve Request
                   </button>
                   <button
-                    onClick={() => handleAction("refused")}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleAction("refused")
+                    }}
                     disabled={processing}
                     className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                   >
@@ -187,9 +225,25 @@ export default function LeaveRequestCard({
                   </button>
                 </>
               )}
+              {canEdit && onEdit && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleAction("edit")
+                  }}
+                  disabled={processing}
+                  className="flex w-full items-center px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
+                >
+                  <Edit size={14} className="mr-2" />
+                  Edit Request
+                </button>
+              )}
               {isOwner && request.status === "pending" && (
                 <button
-                  onClick={() => handleAction("cancel")}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleAction("cancel")
+                  }}
                   disabled={processing}
                   className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                 >
@@ -197,12 +251,24 @@ export default function LeaveRequestCard({
                   Cancel Request
                 </button>
               )}
-              {!isManager && !isOwner && <div className="px-4 py-2 text-sm text-gray-500">No actions available</div>}
-              {(request.status !== "pending" || processing) && (
+              {isManager && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleAction("delete")
+                  }}
+                  disabled={processing}
+                  className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  <XCircle size={14} className="mr-2" />
+                  Delete Request
+                </button>
+              )}
+              {(!isManager && !isOwner) || (request.status !== "pending" && !isManager && !canEdit) || processing ? (
                 <div className="px-4 py-2 text-sm text-gray-500">
                   {processing ? "Processing..." : "No actions available"}
                 </div>
-              )}
+              ) : null}
             </div>
           )}
         </div>
@@ -210,7 +276,19 @@ export default function LeaveRequestCard({
 
       <div className="mt-4">
         <h3 className="text-sm font-medium text-gray-700">Reason:</h3>
-        <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{request.reason}</p>
+        <div className="mt-1">
+          <p className={`whitespace-pre-line text-sm text-gray-600 ${expanded ? "" : "line-clamp-3"}`}>
+            {request.reason}
+          </p>
+          {request.reason.length > 150 && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="mt-1 text-xs font-medium text-[#6148F4] hover:underline"
+            >
+              {expanded ? "Show less" : "Show more"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

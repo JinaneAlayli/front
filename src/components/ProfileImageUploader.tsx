@@ -6,6 +6,7 @@ import Cropper from "react-easy-crop"
 import Dropzone from "react-dropzone"
 import { getCroppedImg } from "@/utils/cropImage"
 import Cookies from "js-cookie"
+import { Minus, Plus, Check, X } from "lucide-react"
 
 export default function ProfileImageUploader({ open, onClose, onSuccess }: any) {
   const [imageSrc, setImageSrc] = useState<string | null>(null)
@@ -53,7 +54,7 @@ export default function ProfileImageUploader({ open, onClose, onSuccess }: any) 
       const token = Cookies.get("jwt")
 
       // Create a custom instance for this request to avoid modifying global defaults
-      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/upload-profile`, {
+      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/upload-profile`, {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -79,11 +80,18 @@ export default function ProfileImageUploader({ open, onClose, onSuccess }: any) 
     }
   }
 
+  const adjustZoom = (amount: number) => {
+    setZoom((prev) => {
+      const newZoom = prev + amount
+      return Math.max(1, Math.min(3, newZoom)) // Clamp between 1 and 3
+    })
+  }
+
   return (
     <Modal open={open} onClose={onClose}>
-      <div className="bg-white p-6 rounded-lg shadow-xl w-[95%] max-w-md mx-auto mt-24">
+      <div className="bg-white rounded-lg shadow-xl w-[95%] max-w-md mx-auto mt-24 overflow-hidden">
         {!imageSrc ? (
-          <>
+          <div className="p-6">
             <Dropzone onDrop={onDrop} accept={{ "image/*": [] }}>
               {({ getRootProps, getInputProps }) => (
                 <div
@@ -96,10 +104,29 @@ export default function ProfileImageUploader({ open, onClose, onSuccess }: any) 
               )}
             </Dropzone>
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-          </>
+          </div>
         ) : (
           <>
-            <div className="relative w-full h-64 bg-gray-100 mb-4">
+            {/* Header */}
+            <div className="bg-[#5d5eee] text-white p-3 flex justify-between items-center">
+              <button
+                onClick={() => {
+                  setImageSrc(null)
+                  setError(null)
+                }}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                aria-label="Cancel"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+             
+
+              
+            </div>
+
+            {/* Cropper area */}
+            <div className="relative w-full h-72 bg-gray-600">
               <Cropper
                 image={imageSrc}
                 crop={crop}
@@ -108,39 +135,50 @@ export default function ProfileImageUploader({ open, onClose, onSuccess }: any) 
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
+                cropShape="round"
               />
+
+              {/* Zoom controls on the right side */}
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex flex-col gap-1">
+                <button
+                  onClick={() => adjustZoom(0.1)}
+                  disabled={zoom >= 3}
+                  className="w-8 h-8 bg-white rounded-sm shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Zoom in"
+                >
+                  <Plus className="h-4 w-4 text-gray-700" />
+                </button>
+                <button
+                  onClick={() => adjustZoom(-0.1)}
+                  disabled={zoom <= 1}
+                  className="w-8 h-8 bg-white rounded-sm shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Zoom out"
+                >
+                  <Minus className="h-4 w-4 text-gray-700" />
+                </button>
+              </div>
+
+              {/* Confirm button */}
+              <div className="absolute right-6 bottom-6">
+                <button
+                  onClick={handleUpload}
+                  disabled={loading}
+                  className="w-12 h-12 rounded-full bg-[#5d5eee] text-white flex items-center justify-center hover:bg-[#4a4bd8] transition-colors disabled:opacity-50 shadow-lg"
+                >
+                  {loading ? (
+                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Check className="h-6 w-6" />
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="mb-4">
-              <label className="text-sm text-gray-600 block mb-1">Zoom</label>
-              <input
-                type="range"
-                min={1}
-                max={3}
-                step={0.1}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-            <div className="flex justify-between">
-              <button
-                onClick={() => {
-                  setImageSrc(null)
-                  setError(null)
-                }}
-                className="text-sm text-gray-600 hover:underline"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={loading}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
-              >
-                {loading ? "Uploading..." : "Upload"}
-              </button>
-            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50">
+                <p className="text-red-500 text-sm">{error}</p>
+              </div>
+            )}
           </>
         )}
       </div>

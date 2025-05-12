@@ -1,20 +1,22 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import Cookies from "js-cookie"
 import { FaBars } from "react-icons/fa"
-import { loginSuccess, setAuthChecked } from "@/lib/redux/slices/authSlice"
+import { logout, loginSuccess, setAuthChecked } from "@/lib/redux/slices/authSlice"
 import api from "@/lib/api"
-import { usePathname } from "next/navigation"
-import { X } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { X, LogOut, ChevronDown, User } from "lucide-react"
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const dispatch = useDispatch()
+  const router = useRouter()
   const { user, isAuthenticated, isAuthChecked } = useSelector((state: RootState) => state.auth)
   const pathname = usePathname()
   const [isLoading, setIsLoading] = useState(false)
@@ -99,6 +101,34 @@ export default function Header() {
       : "text-gray-300 hover:text-white transition-colors border-b-2 border-transparent pb-1 hover:border-gray-300"
   }
 
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout")
+      dispatch(logout())
+      router.push("/login")
+    } catch (error) {
+      console.error("Logout failed:", error)
+      // Still logout on the client side even if the server request fails
+      dispatch(logout())
+      router.push("/login")
+    }
+  }
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const userMenu = document.getElementById("user-menu")
+      if (userMenu && !userMenu.contains(event.target as Node) && userMenuOpen) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [userMenuOpen])
+
   // Instead of returning null during auth check, render a skeleton/loading state
   const renderAuthSection = () => {
     if (!isAuthChecked) {
@@ -112,12 +142,40 @@ export default function Header() {
     if (isAuthenticated && user) {
       return (
         <div className="hidden md:flex items-center space-x-4">
-          <span className="text-sm text-gray-300">Welcome, {user.name || "User"}</span>
-          <Link href="/dashboard">
-            <button className="bg-[#6148F4] text-white px-5 py-2.5 rounded-lg hover:bg-[#5040D9] transition-all shadow-sm">
-              Dashboard
+          <div className="relative" id="user-menu">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+            >
+              <span className="text-sm">{user.name || "User"}</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
             </button>
-          </Link>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-50">
+                <Link
+                  href="/dashboard"
+                  className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 mr-2" />
+                    Dashboard
+                  </div>
+                </Link>
+
+                <div className="border-t border-gray-700 my-1"></div>
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  <div className="flex items-center text-red-400 hover:text-red-300">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )
     }
@@ -127,11 +185,13 @@ export default function Header() {
         <Link href="/login">
           <button className="text-gray-300 hover:text-white font-medium transition-colors px-4 py-2.5">Log in</button>
         </Link>
-        <Link href="/register">
-          <button className="bg-[#6148F4] text-white px-5 py-2.5 rounded-lg hover:bg-[#5040D9] transition-all shadow-sm">
-            Get Started
-          </button>
-        </Link>
+        {!isAuthenticated && (
+          <Link href="/pricing">
+            <button className="bg-[#6148F4] text-white px-5 py-2.5 rounded-lg hover:bg-[#5040D9] transition-all shadow-sm">
+              Get Started
+            </button>
+          </Link>
+        )}
       </div>
     )
   }
@@ -142,11 +202,11 @@ export default function Header() {
         scrolled ? "bg-gray-900 shadow-lg py-3" : "bg-gray-900 py-4"
       }`}
     >
-      <div className="px-6 md:px-32 max-w-7xl mx-auto flex items-center justify-between">
+      <div className="md:px-32 px-6 max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center">
-            <Image src="/logo.png" alt="Beteamly Logo" width={260} height={260} priority className="h-20 w-auto" />
+            <Image src="/homelogo.png" alt="Beteamly Logo" width={110} height={60} />
           </Link>
         </div>
 
@@ -241,6 +301,13 @@ export default function Header() {
                     Dashboard
                   </button>
                 </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 border border-red-500 text-red-400 py-3 rounded-lg hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
               </div>
             ) : (
               <div className="flex flex-col space-y-3">
@@ -249,11 +316,13 @@ export default function Header() {
                     Log in
                   </button>
                 </Link>
-                <Link href="/register" onClick={() => setMenuOpen(false)}>
-                  <button className="w-full bg-[#6148F4] text-white py-3 rounded-lg hover:bg-[#5040D9] transition-colors">
-                    Get Started
-                  </button>
-                </Link>
+                {!isAuthenticated && (
+                  <Link href="/register" onClick={() => setMenuOpen(false)}>
+                    <button className="w-full bg-[#6148F4] text-white py-3 rounded-lg hover:bg-[#5040D9] transition-colors">
+                      Get Started
+                    </button>
+                  </Link>
+                )}
               </div>
             )}
           </div>

@@ -186,7 +186,7 @@ export default function DashboardPage() {
   }
 
   const fetchRegularUserData = async () => {
-    // Return early if no user is logged in
+    
     if (!user) {
       setLoading(false)
       return
@@ -194,7 +194,7 @@ export default function DashboardPage() {
 
     setLoading(true)
     try {
-      // Try to fetch attendance records
+       
       try {
         const attendanceRes = await api.get("/attendance")
         const today = new Date().toISOString().split("T")[0]
@@ -226,7 +226,12 @@ export default function DashboardPage() {
       // Fetch leave requests count (if available)
       let leaveRequests = "-"
       try {
-        const leaveRes = await api.get("/leave-requests")
+        const leaveRes = await api.get(
+          user.role_id === 2 || user.role_id === 3
+            ? "/leave-requests"
+            : "/leave-requests/me"  
+        )
+
         leaveRequests = leaveRes.data.filter((request: any) => request.status === "pending").length.toString()
       } catch (error) {
         console.error("Failed to fetch leave requests data:", error)
