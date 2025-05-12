@@ -9,10 +9,17 @@ export default function AuthLoader() {
   const dispatch = useDispatch()
 
   useEffect(() => {
-    api.get("/auth/me")
-      .then((res) => dispatch(loginSuccess(res.data)))
-      .catch(() => dispatch(logout()))
+    const fetchUser = async () => {
+      try {
+        const res = await api.get("/auth/me")
+        dispatch(loginSuccess(res.data))
+      } catch (error) {
+        dispatch(logout())
+      }
+    }
+
+    fetchUser()
   }, [dispatch])
 
-  return null
+  return null  
 }
