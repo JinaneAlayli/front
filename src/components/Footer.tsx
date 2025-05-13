@@ -9,7 +9,6 @@ import type { RootState } from "@/lib/redux/store"
 import api from "@/lib/api"
 import { Mail, Phone, MapPin, ArrowUp } from "lucide-react"
 import Image from "next/image"
-import Cookies from "js-cookie"
 
 export default function Footer() {
   const [isClient, setIsClient] = useState(false)
@@ -23,55 +22,16 @@ export default function Footer() {
     setIsClient(true)
   }, [])
 
-  async function handleLogout() {
+  const handleLogout = async () => {
     try {
-      // 1. First attempt to logout via the API
       await api.post("/auth/logout")
-
-      // 2. Clear the JWT cookie using multiple approaches
-      // Standard approach
-      Cookies.remove("jwt")
-
-      // Try with explicit path
-      Cookies.remove("jwt", { path: "/" })
-
-      // Try with domain for Vercel
-      if (window.location.hostname.includes("vercel.app")) {
-        Cookies.remove("jwt", {
-          path: "/",
-          domain: window.location.hostname,
-        })
-      }
-
-      // 3. Clear auth header
-      delete api.defaults.headers.common["Authorization"]
-
-      // 4. Set a logout flag in localStorage to prevent auto-login
-      localStorage.setItem("force_logout", "true")
-
-      // 5. Update Redux state
       dispatch(logout())
-
-      // 6. Force a hard reload to clear any in-memory state
-      window.location.href = "/login"
+      router.push("/login")
     } catch (error) {
       console.error("Logout failed:", error)
-
-      // Still perform all the cleanup steps
-      Cookies.remove("jwt")
-      Cookies.remove("jwt", { path: "/" })
-
-      if (window.location.hostname.includes("vercel.app")) {
-        Cookies.remove("jwt", {
-          path: "/",
-          domain: window.location.hostname,
-        })
-      }
-
-      delete api.defaults.headers.common["Authorization"]
-      localStorage.setItem("force_logout", "true")
+      // Still logout on the client side even if the server request fails
       dispatch(logout())
-      window.location.href = "/login"
+      router.push("/login")
     }
   }
 
