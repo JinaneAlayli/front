@@ -103,40 +103,53 @@ export default function Header() {
 
   async function handleLogout() {
     try {
-      // First attempt to logout via the API
+      // 1. First attempt to logout via the API
       await api.post("/auth/logout")
 
-      // Explicitly clear the JWT cookie with proper attributes
-      Cookies.remove("jwt", {
-        path: "/",
-        domain: window.location.hostname.includes("vercel.app") ? window.location.hostname : undefined,
-      })
+      // 2. Clear the JWT cookie using multiple approaches
+      // Standard approach
+      Cookies.remove("jwt")
 
-      // Clear auth header
+      // Try with explicit path
+      Cookies.remove("jwt", { path: "/" })
+
+      // Try with domain for Vercel
+      if (window.location.hostname.includes("vercel.app")) {
+        Cookies.remove("jwt", {
+          path: "/",
+          domain: window.location.hostname,
+        })
+      }
+
+      // 3. Clear auth header
       delete api.defaults.headers.common["Authorization"]
 
-      // Update Redux state
+      // 4. Set a logout flag in localStorage to prevent auto-login
+      localStorage.setItem("force_logout", "true")
+
+      // 5. Update Redux state
       dispatch(logout())
 
-      // Navigate to login page
-      router.push("/login")
+      // 6. Force a hard reload to clear any in-memory state
+      window.location.href = "/login"
     } catch (error) {
       console.error("Logout failed:", error)
 
-      // Still clear cookies and logout on client side
-      Cookies.remove("jwt", {
-        path: "/",
-        domain: window.location.hostname.includes("vercel.app") ? window.location.hostname : undefined,
-      })
+      // Still perform all the cleanup steps
+      Cookies.remove("jwt")
+      Cookies.remove("jwt", { path: "/" })
 
-      // Clear auth header
+      if (window.location.hostname.includes("vercel.app")) {
+        Cookies.remove("jwt", {
+          path: "/",
+          domain: window.location.hostname,
+        })
+      }
+
       delete api.defaults.headers.common["Authorization"]
-
-      // Update Redux state
+      localStorage.setItem("force_logout", "true")
       dispatch(logout())
-
-      // Navigate to login page
-      router.push("/login")
+      window.location.href = "/login"
     }
   }
 

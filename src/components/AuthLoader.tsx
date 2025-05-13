@@ -12,6 +12,16 @@ export default function AuthLoader() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        // Check if we have a forced logout flag
+        const forceLogout = localStorage.getItem("force_logout") === "true"
+        if (forceLogout) {
+          // Clear the flag and ensure we're logged out
+          localStorage.removeItem("force_logout")
+          dispatch(logout())
+          dispatch(setAuthChecked())
+          return
+        }
+
         // First check if the JWT cookie exists
         const token = Cookies.get("jwt")
 
