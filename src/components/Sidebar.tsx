@@ -25,12 +25,13 @@ import {
   CreditCard,
   Badge,
   Briefcase,
-  CalendarArrowUp,
+  CalendarIcon as CalendarArrowUp,
 } from "lucide-react"
 
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import ProfileModal from "./ProfileModal"
+import Cookies from "js-cookie"
 
 // Utility function for conditionally joining classNames
 function cn(...classes: (string | boolean | undefined | null)[]): string {
@@ -143,15 +144,41 @@ export default function Sidebar({ onToggle }: SidebarProps) {
     setIsMobileMenuOpen(false)
   }, [pathname])
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     try {
+      // First attempt to logout via the API
       await api.post("/auth/logout")
+
+      // Explicitly clear the JWT cookie with proper attributes
+      Cookies.remove("jwt", {
+        path: "/",
+        domain: window.location.hostname.includes("vercel.app") ? window.location.hostname : undefined,
+      })
+
+      // Clear auth header
+      delete api.defaults.headers.common["Authorization"]
+
+      // Update Redux state
       dispatch(logout())
+
+      // Navigate to login page
       router.push("/login")
     } catch (error) {
       console.error("Logout failed:", error)
-      // Still logout on the client side even if the server request fails
+
+      // Still clear cookies and logout on client side
+      Cookies.remove("jwt", {
+        path: "/",
+        domain: window.location.hostname.includes("vercel.app") ? window.location.hostname : undefined,
+      })
+
+      // Clear auth header
+      delete api.defaults.headers.common["Authorization"]
+
+      // Update Redux state
       dispatch(logout())
+
+      // Navigate to login page
       router.push("/login")
     }
   }
@@ -175,15 +202,11 @@ export default function Sidebar({ onToggle }: SidebarProps) {
 
   const commonLinks = [{ href: "/dashboard", label: "Home", icon: <Home size={20} /> }]
 
-
   const PlatformownerLinks = [
-     { href: "/admin/companies", label: "companies", icon: <Briefcase size={20} /> },
+    { href: "/admin/companies", label: "companies", icon: <Briefcase size={20} /> },
     { href: "/admin/subscription-plans", label: "subscription-plans", icon: <Badge size={20} /> },
     { href: "/admin/users", label: "users", icon: <Users size={20} /> },
-    
   ]
-
-
 
   const ownerLinks = [
     ...commonLinks,
@@ -208,7 +231,6 @@ export default function Sidebar({ onToggle }: SidebarProps) {
     { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
     { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
     { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
-
   ]
 
   const employeeLinks = [
@@ -217,15 +239,14 @@ export default function Sidebar({ onToggle }: SidebarProps) {
     { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
     { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
     { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
-     { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
-
+    { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
   ]
 
   let linksToRender = employeeLinks
   if (user?.role_id === 2) linksToRender = ownerLinks
   else if (user?.role_id === 3) linksToRender = hrLinks
-  else if(user?.role_id===1)linksToRender=PlatformownerLinks
-  
+  else if (user?.role_id === 1) linksToRender = PlatformownerLinks
+
   const getRoleName = () => {
     if (user?.role_id === 2) return "Owner"
     if (user?.role_id === 3) return "HR Manager"

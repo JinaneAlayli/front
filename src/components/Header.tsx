@@ -101,15 +101,41 @@ export default function Header() {
       : "text-gray-300 hover:text-white transition-colors border-b-2 border-transparent pb-1 hover:border-gray-300"
   }
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     try {
+      // First attempt to logout via the API
       await api.post("/auth/logout")
+
+      // Explicitly clear the JWT cookie with proper attributes
+      Cookies.remove("jwt", {
+        path: "/",
+        domain: window.location.hostname.includes("vercel.app") ? window.location.hostname : undefined,
+      })
+
+      // Clear auth header
+      delete api.defaults.headers.common["Authorization"]
+
+      // Update Redux state
       dispatch(logout())
+
+      // Navigate to login page
       router.push("/login")
     } catch (error) {
       console.error("Logout failed:", error)
-      // Still logout on the client side even if the server request fails
+
+      // Still clear cookies and logout on client side
+      Cookies.remove("jwt", {
+        path: "/",
+        domain: window.location.hostname.includes("vercel.app") ? window.location.hostname : undefined,
+      })
+
+      // Clear auth header
+      delete api.defaults.headers.common["Authorization"]
+
+      // Update Redux state
       dispatch(logout())
+
+      // Navigate to login page
       router.push("/login")
     }
   }
