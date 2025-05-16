@@ -216,7 +216,7 @@ function CheckoutForm() {
     const errors: FormErrors = {}
     let isValid = true
 
-    if (!isRenewing) {
+    if (!user) {
       if (!formData.firstName.trim()) {
         errors.firstName = "Name is required"
         isValid = false
@@ -348,8 +348,8 @@ function CheckoutForm() {
     setIsSubmitting(true)
 
     try {
-      if (isRenewing) {
-        // For renewal, use a different endpoint
+      if (user) {
+        // For logged-in users (both renewal and new subscription)
         await api.post("/companies/renew", {
           subscription_plan_id: planDetails.id,
           billing_cycle: planDetails.billing,
@@ -447,11 +447,9 @@ function CheckoutForm() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div>
-            <h1 className="text-2xl font-bold mb-8">
-              {isRenewing ? "Renew Your Subscription" : "Create a new account"}
-            </h1>
+            <h1 className="text-2xl font-bold mb-8">{user ? "Complete Your Purchase" : "Create a new account"}</h1>
             <form onSubmit={handleSubmit} noValidate>
-              {!isRenewing && (
+              {!user && (
                 <>
                   <div className="space-y-4 mb-6">
                     <div>
@@ -635,10 +633,10 @@ function CheckoutForm() {
                 <Lock className="h-4 w-4 mr-2" />
                 {isSubmitting
                   ? "Processing..."
-                  : isRenewing
+                  : user
                     ? isFreeplan
                       ? "Confirm Free Plan"
-                      : "Complete Renewal"
+                      : "Complete Purchase"
                     : isFreeplan
                       ? "Create Free Account"
                       : "Purchase"}

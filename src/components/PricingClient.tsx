@@ -3,8 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Check, X, Sparkles, ArrowLeft } from "lucide-react"
-import Header from "@/components/Header"
-import Footer from "@/components/Footer"
+ 
 import api from "@/lib/api"
 import { useSelector } from "react-redux"
 
@@ -222,9 +221,7 @@ function PricingContent() {
   // Helper function to conditionally join class names
   const cn = (...classes: string[]) => classes.filter(Boolean).join(" ")
 
-  return (
-    <>
-      {!user?.company_id && <Header />}
+  return ( 
       <main className="bg-[#FAF9F7] text-[#1E293B] min-h-screen">
         <section className="py-20 px-8 md:px-32 max-w-7xl mx-auto">
           {isRenewing && (
@@ -386,7 +383,6 @@ function PricingContent() {
           </div>
         </section>
       </main>
-      {!user?.company_id && <Footer />}
-    </>
+       
   )
 }

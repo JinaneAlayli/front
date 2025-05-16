@@ -8,7 +8,7 @@ export default function AboutPage() {
     <Header />
     <main className="bg-[#FAF9F7] text-[#1E293B]">
       {/* Hero Section */}
-      <section className="py-20 px-8 md:px-32 max-w-7xl mx-auto">
+      <section className="py-26 px-8 md:px-32 max-w-7xl mx-auto">
         <h1 className="text-5xl font-bold leading-tight mb-6">About us</h1>
         <p className="text-lg text-gray-700 max-w-3xl leading-relaxed">
           Beteamly is an HR management software designed to simplify employee management by streamlining attendance,

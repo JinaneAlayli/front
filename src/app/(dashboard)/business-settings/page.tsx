@@ -104,11 +104,17 @@ export default function BusinessSettingsPage() {
 
     setSaving(true)
     try {
-      // Format time values to include seconds for API
+      const formatTime = (time: string | undefined): string => {
+        if (!time || time.trim() === "") return "09:00:00" // Default to 9 AM if empty
+        const [h, m] = time.split(":")
+        if (!h || h === "") return "09:00:00" // Default to 9 AM if hour is empty
+        return `${h.padStart(2, "0")}:${(m || "00").padStart(2, "0")}:00`
+      }
+
       const formattedSettings = {
         ...settings,
-        workday_start: `${settings.workday_start}:00`,
-        workday_end: `${settings.workday_end}:00`,
+        workday_start: formatTime(settings.workday_start),
+        workday_end: formatTime(settings.workday_end),
       }
 
       await businessSettingsService.updateSettings(formattedSettings)
@@ -156,7 +162,6 @@ export default function BusinessSettingsPage() {
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
               <div className="flex items-center">
-               
                 <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Business Settings</h1>
               </div>
               <p className="mt-1 text-gray-500">
