@@ -132,7 +132,7 @@ useEffect(() => {
           ) : (
             <>
               {activeTab === "employees" && <EmployeeTable searchTerm={searchTerm} />}
-              {activeTab === "invited" && <InvitedTable initialInvites={filteredInvites} />
+              {activeTab === "invited" && <InvitedTable initialInvites={filteredInvites}  />
 }
               {activeTab === "inviteForm" && <InviteForm onSuccess={handleRefresh} />}
             </>
