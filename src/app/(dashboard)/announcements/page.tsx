@@ -15,11 +15,6 @@ interface Announcement {
   content: string
   team_id: number | null
   created_at: string
-  creator: {
-    id: number
-    name: string
-    profile_img?: string
-  }
 }
 
 // Helper function to format date
@@ -119,8 +114,7 @@ export default function AnnouncementsPage() {
       filtered = filtered.filter(
         (announcement) =>
           announcement.title.toLowerCase().includes(lowerSearch) ||
-          announcement.content.toLowerCase().includes(lowerSearch) ||
-          announcement.creator.name.toLowerCase().includes(lowerSearch),
+          announcement.content.toLowerCase().includes(lowerSearch),
       )
     }
 
@@ -199,14 +193,10 @@ export default function AnnouncementsPage() {
     return user && [2, 3, 4].includes(user.role_id)
   }
 
-  const isCreator = (announcement: Announcement) => {
-    return user && announcement.creator.id === user.id
-  }
-
   const canEdit = (announcement: Announcement) => {
     // Owner, HR can edit any announcement
     // Team leaders and employees can only edit their own
-    return user && ([2, 3].includes(user.role_id) || isCreator(announcement))
+    return user && [2, 3].includes(user.role_id)
   }
 
   const canDelete = (announcement: Announcement) => {
@@ -416,24 +406,6 @@ export default function AnnouncementsPage() {
                         {announcement.content.split("\n").map((paragraph, i) => (
                           <p key={i}>{paragraph}</p>
                         ))}
-                      </div>
-                      <div className="mt-4 flex items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                          {announcement.creator && announcement.creator.profile_img ? (
-                            <img
-                              src={announcement.creator.profile_img || "/placeholder.svg"}
-                              alt={announcement.creator.name}
-                              className="h-8 w-8 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-xs font-medium text-gray-600">
-                              {announcement.creator ? announcement.creator.name.charAt(0) : "?"}
-                            </span>
-                          )}
-                        </div>
-                        <span className="ml-2 text-sm font-medium text-gray-700">
-                          {announcement.creator ? announcement.creator.name : "Unknown"}
-                        </span>
                       </div>
                     </div>
                   </div>

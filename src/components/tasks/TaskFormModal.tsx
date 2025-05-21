@@ -11,9 +11,19 @@ interface TaskFormModalProps {
   onSuccess: () => void
   initialTask?: any
   userId: number
+  roleId: number
+  teamId: number
 }
 
-export default function TaskFormModal({ open, onClose, onSuccess, initialTask, userId }: TaskFormModalProps) {
+export default function TaskFormModal({
+  open,
+  onClose,
+  onSuccess,
+  initialTask,
+  userId,
+  roleId,
+  teamId,
+}: TaskFormModalProps) {
   const [task, setTask] = useState("")
   const [note, setNote] = useState("")
   const [dueDate, setDueDate] = useState("")
@@ -26,13 +36,25 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
   const [isList, setIsList] = useState(false)
   const noteRef = useRef<HTMLTextAreaElement>(null)
 
+  // Update the useEffect for fetching employees to respect role permissions
   useEffect(() => {
     if (!open) return
 
     const fetchEmployees = async () => {
       try {
         const res = await api.get("/users")
-        setEmployees(res.data)
+
+        // Filter employees based on roleId
+        if (roleId === 4) {
+          // If roleId is 4 (Leader), only show employees from the same team
+          setEmployees(res.data.filter((employee: any) => employee.team_id === teamId))
+        } else if (roleId === 2 || roleId === 3) {
+          // If roleId is 2 (Owner) or 3 (HR), show all employees
+          setEmployees(res.data)
+        } else {
+          // For other roles, show no employees (shouldn't happen with proper UI restrictions)
+          setEmployees([])
+        }
       } catch (error) {
         console.error("Failed to load employees", error)
         toast.error("Failed to load employees")
@@ -40,7 +62,7 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
     }
 
     fetchEmployees()
-  }, [open])
+  }, [open, roleId, teamId])
 
   useEffect(() => {
     if (initialTask) {
@@ -56,10 +78,31 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
     }
   }, [initialTask])
 
+  // Update the handleSubmit function to ensure role-based permissions for task creation
   const handleSubmit = async () => {
+    // Validate required fields
     if (!task.trim()) {
       toast.error("Task description is required")
       return
+    }
+
+    if (!dueDate) {
+      toast.error("Due date is required")
+      return
+    }
+
+    if (!selectedEmployee) {
+      toast.error("Please select an employee to assign the task")
+      return
+    }
+
+    // For Leader (role_id = 4), ensure they can only assign to their team members
+    if (roleId === 4) {
+      const isTeamMember = employees.some((emp) => emp.id === selectedEmployee && emp.team_id === teamId)
+      if (!isTeamMember) {
+        toast.error("You can only assign tasks to your team members")
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -68,8 +111,8 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
       const payload = {
         task,
         note,
-        due_date: dueDate || null,
-        user_id: selectedEmployee || userId,
+        due_date: dueDate,
+        user_id: selectedEmployee,
       }
 
       if (initialTask) {
@@ -153,7 +196,7 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
             {/* Task Description */}
             <div>
               <label htmlFor="task" className="mb-1 block text-sm font-medium text-gray-700">
-                Task Description
+                Task Description <span className="text-red-500">*</span>
               </label>
               <div className="relative rounded-md shadow-sm">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -207,14 +250,13 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
                     rows={5}
                   />
                 </div>
-              
               </div>
             </div>
 
             {/* Due Date */}
             <div>
               <label htmlFor="due-date" className="mb-1 block text-sm font-medium text-gray-700">
-                Due Date (Optional)
+                Due Date <span className="text-red-500">*</span>
               </label>
               <div className="relative rounded-md shadow-sm">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -226,6 +268,7 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
                   className="block w-full rounded-lg border border-gray-300 py-3 pl-10 pr-3 text-sm shadow-sm transition-all focus:border-[#6148F4] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/20"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
+                  required
                 />
               </div>
             </div>
@@ -233,7 +276,7 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
             {/* Assign To */}
             <div>
               <label htmlFor="employee" className="mb-1 block text-sm font-medium text-gray-700">
-                Assign To (Optional)
+                Assign To <span className="text-red-500">*</span>
               </label>
               <div className="relative rounded-md shadow-sm">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -244,8 +287,9 @@ export default function TaskFormModal({ open, onClose, onSuccess, initialTask, u
                   className="block w-full appearance-none rounded-lg border border-gray-300 bg-none py-3 pl-10 pr-10 text-sm shadow-sm transition-all focus:border-[#6148F4] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/20"
                   value={selectedEmployee || ""}
                   onChange={(e) => setSelectedEmployee(e.target.value ? Number(e.target.value) : null)}
+                  required
                 >
-                  <option value="">Assign to me</option>
+                  <option value="">Select an employee</option>
                   {employees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
                       {employee.name}

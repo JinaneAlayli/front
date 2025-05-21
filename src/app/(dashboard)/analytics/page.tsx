@@ -6,19 +6,29 @@ import { toast } from "react-toastify"
 import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import api from "@/lib/api"
-import { BarChart3, Clock, Users, TrendingUp, Download, Award, CheckCircle, AlertTriangle } from "lucide-react"
+import {
+  BarChart3,
+  Clock,
+  Users,
+  TrendingUp,
+  Download,
+  Award,
+  CheckCircle,
+  AlertTriangle,
+  User,
+  PieChart,
+} from "lucide-react"
 
 // Define types for API responses
-interface User {
+interface ApiUser {
   id: number
-  first_name: string
-  last_name: string
+  name: string
   position?: string
   team_id?: number
   company_id?: number
   role_id?: number
   email?: string
-  avatar_url?: string
+  profile_img?: string
 }
 
 interface Task {
@@ -58,6 +68,31 @@ interface Salary {
   effective_date: string
   end_date?: string
   is_active: boolean
+  base_salary?: number
+  bonus?: number
+  overtime?: number
+  deductions?: number
+  month?: number
+  year?: number
+  user?: {
+    id: number
+    name: string
+    position?: string
+  }
+}
+
+interface BusinessSetting {
+  id: number
+  company_id: number
+  salary_cycle: string
+  workday_start: string
+  workday_end: string
+  annual_leave_days: number
+  sick_leave_days: number
+  overtime_rate: number
+  currency: string
+  created_at: Date
+  updated_at: Date
 }
 
 // Define types for employee performance metrics
@@ -97,6 +132,7 @@ interface AnalyticsData {
     id: number
     name: string
     position: string
+    avatar?: string
     lateCount: number
     absenceCount: number
     avgLateMinutes: number
@@ -114,6 +150,28 @@ interface AnalyticsData {
     range: string
     count: number
   }[]
+  businessSettings?: BusinessSetting
+  salaryData?: {
+    allSalaries: Salary[]
+    departmentSalaries: {
+      department: string
+      avgSalary: number
+      count: number
+    }[]
+    topEarners: Salary[]
+    compensationBreakdown: {
+      baseSalary: number
+      bonus: number
+      overtime: number
+      deductions: number
+      total: number
+    }
+    monthlySalaries?: {
+      month: number
+      year: number
+      avgSalary: number
+    }[]
+  }
 }
 
 // Define type for task data map
@@ -169,7 +227,7 @@ export default function AnalyticsPage() {
 
       // Fetch users data to get employees from the same company
       const usersResponse = await api.get("/users")
-      const allUsers: User[] = usersResponse.data
+      const allUsers: ApiUser[] = usersResponse.data
 
       // Filter users by company_id to get only employees from the same company
       const companyUsers = allUsers.filter((u) => u.company_id === user?.company_id)
@@ -270,7 +328,7 @@ export default function AnalyticsPage() {
 
         // Check if check-in was late
         const checkInTime = new Date(record.check_in_time)
-        const workStartHour = 9 // Assuming work starts at 9 AM
+        const workStartHour = 9
 
         if (
           checkInTime.getHours() > workStartHour ||
@@ -335,11 +393,12 @@ export default function AnalyticsPage() {
           completionRate * taskWeight + attendanceRate * attendanceWeight + onTimeRate * onTimeWeight,
         )
 
+        // Use the name field directly instead of constructing from first_name and last_name
         employeePerformance.push({
           id: user.id,
-          name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
+          name: user.name || "Unknown User",
           position: user.position || "Employee",
-          avatar: user.avatar_url,
+          avatar: user.profile_img || undefined, // Use profile_img instead of avatar_url
           tasksCompleted: taskData.completed,
           tasksTotal: taskData.total,
           completionRate,
@@ -359,10 +418,12 @@ export default function AnalyticsPage() {
         .filter((user) => user.id && userAttendanceMap.has(user.id))
         .map((user) => {
           const data = userAttendanceMap.get(user.id!)!
+
           return {
             id: user.id!,
-            name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
+            name: user.name || "Unknown User", // Use name directly
             position: user.position || "Employee",
+            avatar: user.profile_img || undefined, // Use profile_img instead of avatar_url
             lateCount: data.lateCount,
             absenceCount: data.absenceCount,
             avgLateMinutes: data.lateCount > 0 ? Math.round(data.totalLateMinutes / data.lateCount) : 0,
@@ -429,7 +490,16 @@ export default function AnalyticsPage() {
         const companySalaries = salaries.filter((salary) => companyUserIds.includes(salary.user_id))
 
         // Calculate salary metrics
-        const totalSalary = companySalaries.reduce((sum, salary) => sum + salary.amount, 0)
+        const totalSalary = companySalaries.reduce((sum, salary) => {
+          // Calculate total salary (base + bonus + overtime - deductions)
+          const total =
+            Number(salary.base_salary || 0) +
+            Number(salary.bonus || 0) +
+            Number(salary.overtime || 0) -
+            Number(salary.deductions || 0)
+          return sum + total
+        }, 0)
+
         summary.totalSalaryBudget = totalSalary
         summary.avgSalary = companySalaries.length > 0 ? Math.round(totalSalary / companySalaries.length) : 0
 
@@ -443,9 +513,11 @@ export default function AnalyticsPage() {
         ]
 
         const salaryDistribution = salaryRanges.map((range) => {
-          const count = companySalaries.filter(
-            (salary) => salary.amount >= range.min && salary.amount < range.max,
-          ).length
+          // Count employees with base_salary in this range
+          const count = companySalaries.filter((salary) => {
+            const baseSalary = Number(salary.base_salary || 0)
+            return baseSalary >= range.min && baseSalary < range.max
+          }).length
 
           return {
             range: range.label,
@@ -454,9 +526,146 @@ export default function AnalyticsPage() {
         })
 
         analyticsData.salaryDistribution = salaryDistribution
+
+        // Process salary data for the new visualizations
+        const salaryData = {
+          allSalaries: companySalaries,
+          departmentSalaries: [] as { department: string; avgSalary: number; count: number }[],
+          topEarners: [] as Salary[],
+          compensationBreakdown: {
+            baseSalary: 0,
+            bonus: 0,
+            overtime: 0,
+            deductions: 0,
+            total: 0,
+          },
+          monthlySalaries: [] as { month: number; year: number; avgSalary: number }[],
+        }
+
+        // Calculate compensation breakdown
+        let totalBaseSalary = 0
+        let totalBonus = 0
+        let totalOvertime = 0
+        let totalDeductions = 0
+
+        companySalaries.forEach((salary) => {
+          totalBaseSalary += Number(salary.base_salary || 0)
+          totalBonus += Number(salary.bonus || 0)
+          totalOvertime += Number(salary.overtime || 0)
+          totalDeductions += Number(salary.deductions || 0)
+        })
+
+        salaryData.compensationBreakdown = {
+          baseSalary: totalBaseSalary,
+          bonus: totalBonus,
+          overtime: totalOvertime,
+          deductions: totalDeductions,
+          total: totalBaseSalary + totalBonus + totalOvertime - totalDeductions,
+        }
+
+        // Get top earners
+        salaryData.topEarners = [...companySalaries]
+          .sort((a, b) => {
+            const totalA =
+              Number(a.base_salary || 0) + Number(a.bonus || 0) + Number(a.overtime || 0) - Number(a.deductions || 0)
+            const totalB =
+              Number(b.base_salary || 0) + Number(b.bonus || 0) + Number(b.overtime || 0) - Number(b.deductions || 0)
+            return totalB - totalA
+          })
+          .slice(0, 5)
+
+        // Group salaries by department/team
+        const departmentMap = new Map<number, { totalSalary: number; count: number; name: string }>()
+
+        companySalaries.forEach((salary) => {
+          const employee = companyUsers.find((u) => u.id === salary.user_id)
+          if (!employee || !employee.team_id) return
+
+          const totalSalary =
+            Number(salary.base_salary || 0) +
+            Number(salary.bonus || 0) +
+            Number(salary.overtime || 0) -
+            Number(salary.deductions || 0)
+
+          if (!departmentMap.has(employee.team_id)) {
+            const team = companyTeams.find((t) => t.id === employee.team_id)
+            departmentMap.set(employee.team_id, {
+              totalSalary,
+              count: 1,
+              name: team ? team.name : `Team ${employee.team_id}`,
+            })
+          } else {
+            const dept = departmentMap.get(employee.team_id)!
+            dept.totalSalary += totalSalary
+            dept.count += 1
+          }
+        })
+
+        departmentMap.forEach((value, key) => {
+          salaryData.departmentSalaries.push({
+            department: value.name,
+            avgSalary: Math.round(value.totalSalary / value.count),
+            count: value.count,
+          })
+        })
+
+        // Sort departments by average salary
+        salaryData.departmentSalaries.sort((a, b) => b.avgSalary - a.avgSalary)
+
+        // Group salaries by month to show trends
+        const monthlyMap = new Map<string, { totalSalary: number; count: number; month: number; year: number }>()
+
+        companySalaries.forEach((salary) => {
+          if (!salary.month || !salary.year) return
+
+          const key = `${salary.year}-${salary.month}`
+          const totalSalary =
+            Number(salary.base_salary || 0) +
+            Number(salary.bonus || 0) +
+            Number(salary.overtime || 0) -
+            Number(salary.deductions || 0)
+
+          if (!monthlyMap.has(key)) {
+            monthlyMap.set(key, {
+              totalSalary,
+              count: 1,
+              month: salary.month,
+              year: salary.year,
+            })
+          } else {
+            const monthData = monthlyMap.get(key)!
+            monthData.totalSalary += totalSalary
+            monthData.count += 1
+          }
+        })
+
+        monthlyMap.forEach((value, key) => {
+          salaryData.monthlySalaries!.push({
+            month: value.month,
+            year: value.year,
+            avgSalary: Math.round(value.totalSalary / value.count),
+          })
+        })
+
+        // Sort monthly salaries by date
+        salaryData.monthlySalaries!.sort((a, b) => {
+          if (a.year !== b.year) return a.year - b.year
+          return a.month - b.month
+        })
+
+        analyticsData.salaryData = salaryData
       } catch (error) {
         console.error("Failed to fetch salary data:", error)
         // Continue with other data if salary data fails
+      }
+
+      // Fetch business settings
+      try {
+        const businessSettingsResponse = await api.get("/business-settings/me")
+        analyticsData.businessSettings = businessSettingsResponse.data
+      } catch (error) {
+        console.error("Failed to fetch business settings:", error)
+        // Continue with other data if business settings fetch fails
       }
 
       setAnalyticsData(analyticsData)
@@ -502,6 +711,51 @@ export default function AnalyticsPage() {
     } catch (error) {
       console.error("Failed to export report:", error)
       toast.error("Failed to export report")
+    }
+  }
+
+  // Simple currency formatter
+  const formatCurrency = (amount: number) => {
+    const currency = analyticsData.businessSettings?.currency || "USD"
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  // Calculate percentage for compensation breakdown
+  const getCompensationPercentage = (value: number, total: number) => {
+    if (!total) return 0
+    return Math.round((value / total) * 100)
+  }
+
+  // Calculate stroke dasharray and dashoffset for pie chart segments
+  const calculatePieSegment = (percentage: number, index: number, total = 100) => {
+    const radius = 40
+    const circumference = 2 * Math.PI * radius
+    const strokeDasharray = circumference
+
+    // Calculate the offset based on previous segments
+    let previousPercentage = 0
+    for (let i = 0; i < index; i++) {
+      previousPercentage += getCompensationPercentage(
+        [
+          analyticsData.salaryData?.compensationBreakdown.baseSalary || 0,
+          analyticsData.salaryData?.compensationBreakdown.bonus || 0,
+          analyticsData.salaryData?.compensationBreakdown.overtime || 0,
+          analyticsData.salaryData?.compensationBreakdown.deductions || 0,
+        ][i],
+        analyticsData.salaryData?.compensationBreakdown.total || 1,
+      )
+    }
+
+    const strokeDashoffset = circumference - (previousPercentage / 100) * circumference
+
+    return {
+      strokeDasharray,
+      strokeDashoffset,
     }
   }
 
@@ -577,11 +831,10 @@ export default function AnalyticsPage() {
           </nav>
         </div>
       </div>
-      // Update the employee performance section to handle no data consistently
       {activeTab === "performance" && (
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Total Employees</h3>
               {analyticsData?.summary?.totalEmployees !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.totalEmployees}</p>
@@ -589,7 +842,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Total Tasks</h3>
               {analyticsData?.summary?.totalTasks !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.totalTasks}</p>
@@ -597,7 +850,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Completed Tasks</h3>
               {analyticsData?.summary?.completedTasks !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.completedTasks}</p>
@@ -605,7 +858,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Pending Tasks</h3>
               {analyticsData?.summary?.pendingTasks !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.pendingTasks}</p>
@@ -615,7 +868,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-lg font-medium">Employee Performance</h3>
             {analyticsData?.employeePerformance && analyticsData.employeePerformance.length > 0 ? (
               <div className="overflow-x-auto">
@@ -635,22 +888,22 @@ export default function AnalyticsPage() {
                       <tr key={employee.id} className="border-b last:border-0 hover:bg-gray-50">
                         <td className="py-3 pl-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-100">
+                            <div className="h-10 w-10 flex-shrink-0">
                               {employee.avatar ? (
                                 <img
                                   src={employee.avatar || "/placeholder.svg"}
                                   alt={employee.name}
-                                  className="h-full w-full object-cover"
+                                  className="h-10 w-10 rounded-full object-cover"
                                 />
                               ) : (
-                                <div className="flex h-full w-full items-center justify-center bg-gray-200 text-gray-500">
-                                  {employee.name.charAt(0)}
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6148F4]/10">
+                                  <User size={20} className="text-[#6148F4]" />
                                 </div>
                               )}
                             </div>
                             <div>
-                              <p className="font-medium">{employee.name}</p>
-                              <p className="text-xs text-gray-500">{employee.position}</p>
+                              <p className="font-medium">{employee.name || "Unknown User"}</p>
+                              <p className="text-xs text-gray-500">{employee.position || "Employee"}</p>
                             </div>
                           </div>
                         </td>
@@ -782,11 +1035,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
       )}
-      // Update the attendance issues section to handle no data consistently
       {activeTab === "attendance" && (
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Avg. Attendance Rate</h3>
               {analyticsData?.summary?.attendanceRate !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.attendanceRate}%</p>
@@ -794,7 +1046,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Late Check-ins</h3>
               {analyticsData?.summary?.lateArrivals !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.lateArrivals}</p>
@@ -802,7 +1054,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Total Employees</h3>
               {analyticsData?.summary?.totalEmployees !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.totalEmployees}</p>
@@ -810,13 +1062,13 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Working Days</h3>
               <p className="text-2xl font-bold">20</p>
             </div>
           </div>
 
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-lg font-medium">Attendance Issues</h3>
             {analyticsData?.attendanceIssues && analyticsData.attendanceIssues.length > 0 ? (
               <div className="overflow-x-auto">
@@ -834,12 +1086,22 @@ export default function AnalyticsPage() {
                       <tr key={employee.id} className="border-b last:border-0 hover:bg-gray-50">
                         <td className="py-3 pl-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                              {employee.name.charAt(0)}
+                            <div className="h-10 w-10 flex-shrink-0">
+                              {employee.avatar ? (
+                                <img
+                                  src={employee.avatar || "/placeholder.svg"}
+                                  alt={employee.name}
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6148F4]/10">
+                                  <User size={20} className="text-[#6148F4]" />
+                                </div>
+                              )}
                             </div>
                             <div>
-                              <p className="font-medium">{employee.name}</p>
-                              <p className="text-xs text-gray-500">{employee.position}</p>
+                              <p className="font-medium">{employee.name || "Unknown User"}</p>
+                              <p className="text-xs text-gray-500">{employee.position || "Employee"}</p>
                             </div>
                           </div>
                         </td>
@@ -895,11 +1157,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
       )}
-      // Update the teams section to handle no data consistently
       {activeTab === "teams" && (
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Total Teams</h3>
               {analyticsData?.summary?.totalTeams !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.totalTeams}</p>
@@ -907,7 +1168,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Avg. Team Size</h3>
               {analyticsData?.summary?.avgTeamSize !== undefined ? (
                 <p className="text-2xl font-bold">{analyticsData.summary.avgTeamSize}</p>
@@ -915,7 +1176,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Best Performing Team</h3>
               {analyticsData?.teamPerformance && analyticsData.teamPerformance.length > 0 ? (
                 <p className="text-2xl font-bold">{analyticsData.teamPerformance[0].name}</p>
@@ -923,7 +1184,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg text-gray-400">No data available</p>
               )}
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-1 text-sm font-medium text-gray-500">Needs Improvement</h3>
               {analyticsData?.teamPerformance && analyticsData.teamPerformance.length > 1 ? (
                 <p className="text-2xl font-bold">
@@ -935,12 +1196,12 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-lg font-medium">Team Performance</h3>
             {analyticsData?.teamPerformance && analyticsData.teamPerformance.length > 0 ? (
               <div className="space-y-6">
                 {analyticsData.teamPerformance.map((team) => (
-                  <div key={team.id} className="rounded-lg border p-4 hover:bg-gray-50">
+                  <div key={team.id} className="rounded-xl border p-4 hover:bg-gray-50">
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
@@ -1025,76 +1286,281 @@ export default function AnalyticsPage() {
           </div>
         </div>
       )}
-      // Update the salaries section to handle no data consistently
       {activeTab === "salaries" && (
         <div className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Total Salary Budget</h3>
-              {analyticsData?.summary?.totalSalaryBudget !== undefined ? (
-                <p className="text-2xl font-bold">${analyticsData.summary.totalSalaryBudget.toLocaleString()}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
+          <div className="grid grid-cols-1 gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 className="mb-1 text-sm font-medium text-gray-500">Total Salary Budget</h3>
+                {analyticsData?.summary?.totalSalaryBudget !== undefined ? (
+                  <p className="text-2xl font-bold">{formatCurrency(analyticsData.summary.totalSalaryBudget)}</p>
+                ) : (
+                  <p className="text-lg text-gray-400">No data available</p>
+                )}
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 className="mb-1 text-sm font-medium text-gray-500">Avg. Salary</h3>
+                {analyticsData?.summary?.avgSalary !== undefined ? (
+                  <p className="text-2xl font-bold">{formatCurrency(analyticsData.summary.avgSalary)}</p>
+                ) : (
+                  <p className="text-lg text-gray-400">No data available</p>
+                )}
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 className="mb-1 text-sm font-medium text-gray-500">Total Employees</h3>
+                {analyticsData?.summary?.totalEmployees !== undefined ? (
+                  <p className="text-2xl font-bold">{analyticsData.summary.totalEmployees}</p>
+                ) : (
+                  <p className="text-lg text-gray-400">No data available</p>
+                )}
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 className="mb-1 text-sm font-medium text-gray-500">Salary Ranges</h3>
+                {analyticsData?.salaryDistribution && analyticsData.salaryDistribution.length > 0 ? (
+                  <p className="text-2xl font-bold">{analyticsData.salaryDistribution.length}</p>
+                ) : (
+                  <p className="text-lg text-gray-400">No data available</p>
+                )}
+              </div>
             </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Avg. Salary</h3>
-              {analyticsData?.summary?.avgSalary !== undefined ? (
-                <p className="text-2xl font-bold">${analyticsData.summary.avgSalary.toLocaleString()}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Total Employees</h3>
-              {analyticsData?.summary?.totalEmployees !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.totalEmployees}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Salary Ranges</h3>
-              {analyticsData?.salaryDistribution && analyticsData.salaryDistribution.length > 0 ? (
-                <p className="text-2xl font-bold">{analyticsData.salaryDistribution.length}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-          </div>
 
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-lg font-medium">Salary Distribution</h3>
-            {analyticsData?.salaryDistribution && analyticsData.salaryDistribution.length > 0 ? (
-              <div className="h-64 w-full">
-                <div className="flex h-full flex-col justify-center">
-                  <div className="grid grid-cols-5 gap-4">
-                    {(() => {
-                      // Using an IIFE to calculate maxCount inside the JSX
-                      const maxCount = Math.max(...analyticsData.salaryDistribution.map((d) => d.count))
-                      const colors = ["bg-indigo-500", "bg-blue-500", "bg-cyan-500", "bg-teal-500", "bg-green-500"]
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-medium">Compensation Insights</h3>
+              {analyticsData?.salaryData ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {/* Compensation Components Chart - This will be replaced by the updated version above */}
 
-                      return analyticsData.salaryDistribution.map((data, i) => (
-                        <div key={i} className="flex flex-col items-center">
-                          <div className="flex h-40 w-full flex-col-reverse">
-                            <div
-                              className={`w-full rounded-t ${colors[i % colors.length]}`}
-                              style={{ height: maxCount > 0 ? `${(data.count / maxCount) * 100}%` : "0%" }}
-                            ></div>
+                  {/* Compensation Components Chart */}
+                  <div className="h-auto rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <h4 className="mb-4 text-base font-medium text-gray-700">Compensation Components</h4>
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="relative h-64 w-64">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-500">Total Budget</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {analyticsData?.summary?.totalSalaryBudget !== undefined
+                                ? formatCurrency(analyticsData.summary.totalSalaryBudget)
+                                : "$0"}
+                            </p>
                           </div>
-                          <p className="mt-2 text-sm font-medium">{data.range}</p>
-                          <p className="text-xs text-gray-500">{data.count} employees</p>
                         </div>
-                      ))
-                    })()}
+                        {analyticsData.salaryData?.compensationBreakdown.total > 0 ? (
+                          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+                            {/* Base Salary Segment */}
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="none"
+                              stroke="#6148F4"
+                              strokeWidth="12"
+                              strokeDasharray="251.2"
+                              strokeDashoffset="0"
+                              className="opacity-90"
+                            />
+                            {/* Bonus Segment */}
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="none"
+                              stroke="#38BDF8"
+                              strokeWidth="12"
+                              strokeDasharray="251.2"
+                              strokeDashoffset={
+                                251.2 *
+                                (1 -
+                                  getCompensationPercentage(
+                                    analyticsData.salaryData.compensationBreakdown.baseSalary,
+                                    analyticsData.salaryData.compensationBreakdown.total,
+                                  ) /
+                                    100)
+                              }
+                              className="opacity-90"
+                            />
+                            {/* Overtime Segment */}
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="none"
+                              stroke="#4ADE80"
+                              strokeWidth="12"
+                              strokeDasharray="251.2"
+                              strokeDashoffset={
+                                251.2 *
+                                (1 -
+                                  (getCompensationPercentage(
+                                    analyticsData.salaryData.compensationBreakdown.baseSalary,
+                                    analyticsData.salaryData.compensationBreakdown.total,
+                                  ) +
+                                    getCompensationPercentage(
+                                      analyticsData.salaryData.compensationBreakdown.bonus,
+                                      analyticsData.salaryData.compensationBreakdown.total,
+                                    )) /
+                                    100)
+                              }
+                              className="opacity-90"
+                            />
+                            {/* Deductions Segment */}
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="none"
+                              stroke="#F87171"
+                              strokeWidth="12"
+                              strokeDasharray="251.2"
+                              strokeDashoffset={
+                                251.2 *
+                                (1 -
+                                  (getCompensationPercentage(
+                                    analyticsData.salaryData.compensationBreakdown.baseSalary,
+                                    analyticsData.salaryData.compensationBreakdown.total,
+                                  ) +
+                                    getCompensationPercentage(
+                                      analyticsData.salaryData.compensationBreakdown.bonus,
+                                      analyticsData.salaryData.compensationBreakdown.total,
+                                    ) +
+                                    getCompensationPercentage(
+                                      analyticsData.salaryData.compensationBreakdown.overtime,
+                                      analyticsData.salaryData.compensationBreakdown.total,
+                                    )) /
+                                    100)
+                              }
+                              className="opacity-90"
+                            />
+                          </svg>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <PieChart className="h-16 w-16 text-gray-200" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-6 flex flex-wrap items-center justify-center gap-6">
+                        <div className="flex items-center">
+                          <div className="mr-2 h-3 w-3 rounded-full bg-[#6148F4]"></div>
+                          <span className="text-sm text-gray-600">
+                            Base Salary (
+                            {getCompensationPercentage(
+                              analyticsData.salaryData?.compensationBreakdown.baseSalary || 0,
+                              analyticsData.salaryData?.compensationBreakdown.total || 1,
+                            )}
+                            %)
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="mr-2 h-3 w-3 rounded-full bg-[#38BDF8]"></div>
+                          <span className="text-sm text-gray-600">
+                            Bonuses (
+                            {getCompensationPercentage(
+                              analyticsData.salaryData?.compensationBreakdown.bonus || 0,
+                              analyticsData.salaryData?.compensationBreakdown.total || 1,
+                            )}
+                            %)
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="mr-2 h-3 w-3 rounded-full bg-[#4ADE80]"></div>
+                          <span className="text-sm text-gray-600">
+                            Overtime (
+                            {getCompensationPercentage(
+                              analyticsData.salaryData?.compensationBreakdown.overtime || 0,
+                              analyticsData.salaryData?.compensationBreakdown.total || 1,
+                            )}
+                            %)
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="mr-2 h-3 w-3 rounded-full bg-[#F87171]"></div>
+                          <span className="text-sm text-gray-600">
+                            Deductions (
+                            {getCompensationPercentage(
+                              analyticsData.salaryData?.compensationBreakdown.deductions || 0,
+                              analyticsData.salaryData?.compensationBreakdown.total || 1,
+                            )}
+                            %)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Earners List */}
+                  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <h4 className="mb-2 text-sm font-medium text-gray-700">Top Earners</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b text-left text-xs font-medium uppercase text-gray-500">
+                            <th className="pb-3 pl-4">Employee</th>
+                            <th className="pb-3">Salary</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analyticsData.salaryData.topEarners.map((salary) => (
+                            <tr key={salary.id} className="border-b last:border-0 hover:bg-gray-50">
+                              <td className="py-3 pl-4">{salary.user?.name || "Unknown"}</td>
+                              <td className="py-3">
+                                {formatCurrency(
+                                  Number(salary.base_salary) +
+                                    Number(salary.bonus || 0) +
+                                    Number(salary.overtime || 0) -
+                                    Number(salary.deductions || 0),
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Salary by Department Breakdown */}
+                  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <h4 className="mb-2 text-sm font-medium text-gray-700">Salary by Department</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b text-left text-xs font-medium uppercase text-gray-500">
+                            <th className="pb-3 pl-4">Department</th>
+                            <th className="pb-3">Avg. Salary</th>
+                            <th className="pb-3">Employee Count</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analyticsData.salaryData.departmentSalaries.map((dept) => (
+                            <tr key={dept.department} className="border-b last:border-0 hover:bg-gray-50">
+                              <td className="py-3 pl-4">{dept.department}</td>
+                              <td className="py-3">{formatCurrency(dept.avgSalary)}</td>
+                              <td className="py-3">{dept.count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Salary Growth Chart */}
+                  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <h4 className="mb-2 text-sm font-medium text-gray-700">Salary Growth</h4>
+                    {analyticsData.salaryData.monthlySalaries && analyticsData.salaryData.monthlySalaries.length > 0 ? (
+                      <div className="h-48">
+                        {/* Placeholder for chart */}
+                        <p className="text-center text-gray-500">Chart will be displayed here</p>
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500">No monthly salary data available</p>
+                    )}
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex h-40 items-center justify-center text-gray-400">
-                <p>No data available</p>
-              </div>
-            )}
+              ) : (
+                <div className="flex h-40 items-center justify-center text-gray-400">
+                  <p>No data available</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

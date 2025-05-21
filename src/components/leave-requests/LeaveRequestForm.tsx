@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import api from "@/lib/api"
 import { toast } from "react-toastify"
-import { X, Calendar, FileText, User, Clock, Plus, Edit } from "lucide-react"
+import { X, Calendar, FileText, Clock, Plus, Edit, User } from "lucide-react"
 
-interface User {
+interface ILeaveRequestUser {
   id: number
   name: string
   email?: string
@@ -20,10 +20,10 @@ interface LeaveRequest {
   end_date: string
   status: string
   reason: string
-  user?: User
+  user?: ILeaveRequestUser
   created_at?: string
   manager_id?: number
-  manager?: User
+  manager?: ILeaveRequestUser
 }
 
 interface LeaveRequestFormProps {
@@ -51,7 +51,7 @@ export default function LeaveRequestForm({
   const [endDate, setEndDate] = useState("")
   const [reason, setReason] = useState("")
   const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null)
-  const [employees, setEmployees] = useState<User[]>([])
+  const [employees, setEmployees] = useState<ILeaveRequestUser[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showCustomType, setShowCustomType] = useState(false)
 
@@ -86,7 +86,8 @@ export default function LeaveRequestForm({
       try {
         // Only fetch employees with role_id 4 or 5 as per requirements
         const res = await api.get("/users?role_ids=4,5")
-        setEmployees(res.data)
+        // Filter out the current user from the employees list
+        setEmployees(res.data.filter((employee: ILeaveRequestUser) => employee.id !== userId))
       } catch (error) {
         console.error("Failed to load employees", error)
         toast.error("Failed to load employees")
@@ -94,7 +95,7 @@ export default function LeaveRequestForm({
     }
 
     fetchEmployees()
-  }, [open, canCreateForOthers])
+  }, [open, canCreateForOthers, userId])
 
   const resetForm = () => {
     setType("vacation")
@@ -156,36 +157,34 @@ export default function LeaveRequestForm({
 
       resetForm()
       onSuccess()
-   } catch (error: any) {
-  const status = error?.response?.status
-  const backendMessage = error?.response?.data?.message
+    } catch (error: any) {
+      const status = error?.response?.status
+      const backendMessage = error?.response?.data?.message
 
-  if (status === 403) {
-    if (typeof backendMessage === "string") {
-      toast.error(backendMessage)
-    } else if (Array.isArray(backendMessage)) {
-      toast.error(backendMessage[0])
-    } else {
-      toast.error("You already have a pending request.")
-    }
-    return  
-  }
+      if (status === 403) {
+        if (typeof backendMessage === "string") {
+          toast.error(backendMessage)
+        } else if (Array.isArray(backendMessage)) {
+          toast.error(backendMessage[0])
+        } else {
+          toast.error("You already have a pending request.")
+        }
+        return
+      }
 
-  console.error(`Failed to ${isEditMode ? "update" : "submit"} leave request:`, error)
-  toast.error("An unexpected error occurred.")
-}
-
-finally {
+      console.error(`Failed to ${isEditMode ? "update" : "submit"} leave request:`, error)
+      toast.error("An unexpected error occurred.")
+    } finally {
       setIsSubmitting(false)
     }
   }
- 
+
   const calculateDays = () => {
     if (!startDate || !endDate) return null
 
     const start = new Date(startDate)
     const end = new Date(endDate)
- 
+
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
 
     const diffTime = Math.abs(end.getTime() - start.getTime())

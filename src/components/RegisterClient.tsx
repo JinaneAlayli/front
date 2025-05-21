@@ -11,6 +11,7 @@ type InviteData = {
   role_id: number
   team_id: number
   company_id: number
+  position?: string
 }
 
 type FormData = {
@@ -24,6 +25,7 @@ function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
+  const positionFromUrl = searchParams.get("position")
 
   const [invite, setInvite] = useState<InviteData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -34,12 +36,18 @@ function RegisterForm() {
     email: "",
     password: "",
   })
+  const [position, setPosition] = useState<string>("")
 
   useEffect(() => {
     if (!token) {
       setIsLoading(false)
       setError("No invite token provided")
       return
+    }
+
+    // Set position from URL if available
+    if (positionFromUrl) {
+      setPosition(positionFromUrl)
     }
 
     api
@@ -55,7 +63,7 @@ function RegisterForm() {
       .finally(() => {
         setIsLoading(false)
       })
-  }, [token, router])
+  }, [token, router, positionFromUrl])
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -71,11 +79,12 @@ function RegisterForm() {
         role_id: invite.role_id,
         team_id: invite.team_id,
         company_id: invite.company_id,
+        position: position, // Include position from URL parameter
       }
 
       await api.post("/users/register", payload)
       toast.success("Registered successfully!")
-      router.push("/auth/login")
+      router.push("/login")
     } catch (err: any) {
       setError(err.response?.data?.message || "Registration failed")
       toast.error(err.response?.data?.message || "Registration failed")
@@ -92,6 +101,28 @@ function RegisterForm() {
   const getRoleName = () => {
     if (!invite) return "Employee"
     return invite.role_id === 3 ? "HR" : invite.role_id === 4 ? "Team Leader" : "Employee"
+  }
+
+  // Add position field to the form
+  const renderPositionField = () => {
+    if (!position) return null
+
+    return (
+      <div className="space-y-2">
+        <label htmlFor="position" className="text-sm font-medium text-gray-700">
+          Position
+        </label>
+        <input
+          id="position"
+          name="position"
+          type="text"
+          value={position}
+          readOnly
+          className="w-full rounded-md border border-gray-300 bg-gray-50 px-4 py-2 text-gray-500"
+        />
+        <p className="text-xs text-gray-500">This position is associated with your invite</p>
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -165,6 +196,9 @@ function RegisterForm() {
                 <p className="text-xs text-gray-500">This email is associated with your invite</p>
               </div>
 
+              {/* Display position field if available */}
+              {renderPositionField()}
+
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
@@ -220,7 +254,7 @@ function RegisterForm() {
                 <button
                   type="button"
                   className="text-[#6148F4] hover:text-[#5040d3] hover:underline"
-                  onClick={() => router.push("/auth/login")}
+                  onClick={() => router.push("/login")}
                 >
                   Already have an account? Sign in
                 </button>

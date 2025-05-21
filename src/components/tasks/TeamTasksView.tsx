@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import api from "@/lib/api"
 import { toast } from "react-toastify"
-import { CheckCircle, Clock, AlertCircle, Calendar, Save, Check, Filter, MoreHorizontal, Edit } from "lucide-react"
+import { Calendar, Filter, MoreHorizontal, Edit, Trash2, Check, Users, PlusCircle } from "lucide-react"
 import {
   DragDropContext,
   Droppable,
@@ -12,6 +12,7 @@ import {
   type DraggableProvided,
   type DropResult,
 } from "@hello-pangea/dnd"
+import TaskFormModal from "./TaskFormModal"
 
 interface Task {
   id: number
@@ -19,6 +20,10 @@ interface Task {
   note: string
   completed: boolean
   due_date?: string
+  user?: {
+    id: number
+    name: string
+  }
 }
 
 interface Column {
@@ -27,38 +32,52 @@ interface Column {
   tasks: Task[]
 }
 
+interface TeamMember {
+  id: number
+  name: string
+}
+
 interface Props {
   tasks: Task[]
   onRefresh: () => void
+  userId: number
+  teamId: number
 }
 
-export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
+export default function TeamTasksView({ tasks, onRefresh, userId, teamId }: Props) {
   const [columns, setColumns] = useState<Column[]>([])
-  const [notes, setNotes] = useState<{ [taskId: number]: string }>({})
-  const [editingNotes, setEditingNotes] = useState<number[]>([])
-  const [savingNotes, setSavingNotes] = useState<number[]>([])
-  const [updatingStatus, setUpdatingStatus] = useState<number[]>([])
   const [actionTask, setActionTask] = useState<number | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [openModal, setOpenModal] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState<number[]>([])
   const [filters, setFilters] = useState({
     status: "",
+    member: "",
     month: "",
     year: "",
   })
 
-  // Initialize notes state when tasks change
+  // Fetch team members
   useEffect(() => {
-    setNotes(
-      tasks.reduce(
-        (acc, task) => {
-          acc[task.id] = task.note || ""
-          return acc
-        },
-        {} as { [key: number]: string },
-      ),
-    )
+    const fetchTeamMembers = async () => {
+      try {
+        const res = await api.get("/users")
+        // Filter users by team_id to ensure leaders only see their team members
+        const members = res.data.filter((user: any) => user.team_id === teamId)
+        setTeamMembers(members)
+      } catch (error) {
+        console.error("Failed to fetch team members:", error)
+        toast.error("Failed to load team members")
+      }
+    }
 
-    // Group tasks into columns
+    fetchTeamMembers()
+  }, [teamId])
+
+  // Group tasks into columns
+  useEffect(() => {
     updateColumns(tasks)
   }, [tasks])
 
@@ -90,28 +109,7 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
     return dueDate < today
   }
 
-  const handleNoteChange = (id: number, newNote: string) => {
-    setNotes((prev) => ({ ...prev, [id]: newNote }))
-    if (!editingNotes.includes(id)) {
-      setEditingNotes([...editingNotes, id])
-    }
-  }
-
-  const handleSaveNote = async (id: number) => {
-    try {
-      setSavingNotes([...savingNotes, id])
-      await api.patch(`/tasks/${id}`, { note: notes[id] })
-      toast.success("Note updated successfully")
-      setEditingNotes(editingNotes.filter((noteId) => noteId !== id))
-      onRefresh()
-    } catch (err) {
-      toast.error("Failed to update note")
-      console.error("Failed to update note:", err)
-    } finally {
-      setSavingNotes(savingNotes.filter((noteId) => noteId !== id))
-    }
-  }
-
+  // Update the handleToggleComplete method to ensure leaders can update task status
   const handleToggleComplete = async (id: number, completed: boolean) => {
     try {
       setUpdatingStatus([...updatingStatus, id])
@@ -126,40 +124,37 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
     }
   }
 
-  const toggleActionMenu = (taskId: number | null) => {
-    setActionTask(taskId)
+  const handleEdit = (task: Task) => {
+    setEditingTask(task)
+    setOpenModal(true)
   }
 
-  // Function to get status badge
-  const getStatusBadge = (task: Task) => {
-    if (task.completed) {
-      return (
-        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
-          <CheckCircle size={12} className="mr-1" />
-          Completed
-        </span>
-      )
-    } else if (isOverdue(task.due_date, task.completed)) {
-      return (
-        <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
-          <AlertCircle size={12} className="mr-1" />
-          Overdue
-        </span>
-      )
-    } else if (task.due_date) {
-      return (
-        <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-          <Clock size={12} className="mr-1" />
-          Pending
-        </span>
-      )
-    } else {
-      return (
-        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-          Pending
-        </span>
-      )
+  const handleDelete = async (id: number) => {
+    if (confirm("Are you sure you want to delete this task?")) {
+      try {
+        await api.delete(`/tasks/${id}`)
+        toast.success("Task deleted successfully")
+        onRefresh()
+      } catch (error) {
+        toast.error("Failed to delete task")
+        console.error("Failed to delete task:", error)
+      }
     }
+  }
+
+  // Update the handleCreate method to ensure leaders can create tasks for team members
+  const handleCreate = () => {
+    setEditingTask(null)
+    setOpenModal(true)
+  }
+
+  const handleModalSuccess = () => {
+    onRefresh()
+    setOpenModal(false)
+  }
+
+  const toggleActionMenu = (taskId: number | null) => {
+    setActionTask(taskId)
   }
 
   // Function to handle drag and drop
@@ -209,6 +204,11 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
   // Filter tasks based on selected filters
   const applyFilters = () => {
     let filteredTasks = [...tasks]
+
+    // Filter by team member
+    if (filters.member) {
+      filteredTasks = filteredTasks.filter((task) => task.user?.id === Number.parseInt(filters.member))
+    }
 
     // Filter by status
     if (filters.status) {
@@ -270,50 +270,66 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
       {tasks.length === 0 ? (
         <div className="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
           <div className="mb-2 rounded-full bg-gray-100 p-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-6 w-6 text-gray-400"
-            >
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-              <line x1="16" x2="16" y1="2" y2="6" />
-              <line x1="8" x2="8" y1="2" y2="6" />
-              <line x1="3" x2="21" y1="10" y2="10" />
-              <path d="M8 14h.01" />
-              <path d="M12 14h.01" />
-              <path d="M16 14h.01" />
-              <path d="M8 18h.01" />
-              <path d="M12 18h.01" />
-              <path d="M16 18h.01" />
-            </svg>
+            <Users className="h-6 w-6 text-gray-400" />
           </div>
-          <h3 className="text-sm font-medium text-gray-900">No tasks assigned to you</h3>
-          <p className="mt-1 text-xs text-gray-500">Check back later for new assignments</p>
+          <h3 className="text-sm font-medium text-gray-900">No tasks found for your team</h3>
+          <p className="mt-1 text-xs text-gray-500">Create a new task to get started</p>
+          <button
+            onClick={handleCreate}
+            className="mt-4 inline-flex items-center rounded-lg bg-[#6148F4] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#5040d3] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/50 focus:ring-offset-2"
+          >
+            <PlusCircle size={16} className="mr-2" />
+            Create Task
+          </button>
         </div>
       ) : (
         <>
-          {/* Filters */}
+          {/* Header with Create Button and Filters */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-gray-900">My Tasks</h2>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 border border-gray-200"
-              >
-                <Filter size={16} className="mr-1.5 text-gray-500" />
-                Filters
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <h2 className="text-lg font-medium text-gray-900 flex items-center">
+                <Users size={20} className="mr-2 text-[#6148F4]" />
+                Team Tasks
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCreate}
+                  className="inline-flex items-center rounded-lg bg-[#6148F4] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#5040d3] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/50 focus:ring-offset-2"
+                >
+                  <PlusCircle size={16} className="mr-2" />
+                  Create Task
+                </button>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 border border-gray-200"
+                >
+                  <Filter size={16} className="mr-1.5 text-gray-500" />
+                  Filters
+                </button>
+              </div>
             </div>
 
             {showFilters && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
+                <div>
+                  <label htmlFor="member-filter" className="mb-1 block text-xs font-medium text-gray-700">
+                    Filter by Team Member
+                  </label>
+                  <select
+                    id="member-filter"
+                    value={filters.member}
+                    onChange={(e) => setFilters({ ...filters, member: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#6148F4] focus:outline-none focus:ring-1 focus:ring-[#6148F4]/50"
+                  >
+                    <option value="">All Team Members</option>
+                    {teamMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label htmlFor="status-filter" className="mb-1 block text-xs font-medium text-gray-700">
                     Filter by Status
@@ -369,9 +385,9 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
                   </select>
                 </div>
 
-                <div className="sm:col-span-3">
+                <div className="lg:col-span-4">
                   <button
-                    onClick={() => setFilters({ status: "", month: "", year: "" })}
+                    onClick={() => setFilters({ status: "", member: "", month: "", year: "" })}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
                   >
                     Clear Filters
@@ -435,6 +451,11 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
                                       >
                                         {task.task}
                                       </h3>
+                                      {task.note && (
+                                        <div className="mt-1 text-sm text-gray-600 bg-gray-50 p-2 rounded-md">
+                                          {task.note}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
 
@@ -450,68 +471,52 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
                                       <div className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-gray-100 bg-white py-1 shadow-lg">
                                         <button
                                           onClick={() => {
-                                            handleNoteChange(task.id, notes[task.id] || task.note || "")
-                                            setEditingNotes([...editingNotes, task.id])
+                                            handleEdit(task)
                                             setActionTask(null)
                                           }}
                                           className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                                         >
                                           <Edit size={14} className="mr-2" />
-                                          Add/Edit Note
+                                          Edit Task
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleDelete(task.id)
+                                            setActionTask(null)
+                                          }}
+                                          className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                                        >
+                                          <Trash2 size={14} className="mr-2" />
+                                          Delete Task
                                         </button>
                                       </div>
                                     )}
                                   </div>
                                 </div>
 
-                                {/* Note editing area - only show when editing */}
-                                {editingNotes.includes(task.id) && (
-                                  <div className="mt-3 space-y-2">
-                                    <textarea
-                                      id={`note-${task.id}`}
-                                      value={notes[task.id] || ""}
-                                      onChange={(e) => handleNoteChange(task.id, e.target.value)}
-                                      placeholder="Add your notes here..."
-                                      className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm shadow-sm transition-all focus:border-[#6148F4] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/20"
-                                      rows={3}
-                                    />
-
-                                    <button
-                                      onClick={() => handleSaveNote(task.id)}
-                                      disabled={savingNotes.includes(task.id)}
-                                      className="flex w-full items-center justify-center rounded-lg bg-[#6148F4] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#5040d3] focus:outline-none focus:ring-2 focus:ring-[#6148F4]/50 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
-                                    >
-                                      {savingNotes.includes(task.id) ? (
-                                        "Saving..."
-                                      ) : (
-                                        <>
-                                          <Save size={14} className="mr-1.5" />
-                                          Save Note
-                                        </>
-                                      )}
-                                    </button>
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {task.due_date && (
+                                      <span
+                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                          isOverdue(task.due_date, task.completed)
+                                            ? "bg-red-50 text-red-700"
+                                            : "bg-gray-100 text-gray-700"
+                                        }`}
+                                      >
+                                        <Calendar size={12} className="mr-1" />
+                                        {formatDate(task.due_date)}
+                                      </span>
+                                    )}
                                   </div>
-                                )}
 
-                                {/* Display note if it exists and not editing */}
-                                {!editingNotes.includes(task.id) && task.note && (
-                                  <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md">
-                                    {task.note}
-                                  </div>
-                                )}
-
-                                <div className="mt-3 flex flex-wrap items-center gap-2">
-                                  {task.due_date && (
-                                    <span
-                                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                        isOverdue(task.due_date, task.completed)
-                                          ? "bg-red-50 text-red-700"
-                                          : "bg-gray-100 text-gray-700"
-                                      }`}
-                                    >
-                                      <Calendar size={12} className="mr-1" />
-                                      {formatDate(task.due_date)}
-                                    </span>
+                                  {task.user && (
+                                    <div className="flex items-center">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#6148F4]/10 text-xs font-medium text-[#6148F4]">
+                                        {task.user.name.charAt(0)}
+                                      </div>
+                                      <span className="ml-1.5 text-xs text-gray-500">{task.user.name}</span>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -533,6 +538,17 @@ export default function EmployeeTasksView({ tasks, onRefresh }: Props) {
           </DragDropContext>
         </>
       )}
+
+      {/* Task Form Modal */}
+      <TaskFormModal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        onSuccess={handleModalSuccess}
+        initialTask={editingTask}
+        userId={userId}
+        roleId={4}
+        teamId={teamId}
+      />
     </div>
   )
 }

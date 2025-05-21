@@ -6,27 +6,7 @@ import { useDispatch, useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import { logout, updateUser } from "@/lib/redux/slices/authSlice"
 import api from "@/lib/api"
-import {
-  Home,
-  Users,
-  Clock,
-  ClipboardCheck,
-  Megaphone,
-  Settings,
-  LogOut,
-  UserCircle,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  UserPlus,
-  DollarSign,
-  BarChart4,
-  Menu,
-  CreditCard,
-  Badge,
-  Briefcase,
-  CalendarArrowUp,
-} from "lucide-react"
+import { Home, Users, Clock, ClipboardCheck, Megaphone, Settings, LogOut, UserCircle, ChevronRight, ChevronsLeft, ChevronsRight, UserPlus, DollarSign, BarChart4, Menu, CreditCard, Badge, Briefcase, CalendarIcon as CalendarArrowUp } from 'lucide-react'
 
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -175,40 +155,35 @@ export default function Sidebar({ onToggle }: SidebarProps) {
 
   const commonLinks = [{ href: "/dashboard", label: "Home", icon: <Home size={20} /> }]
 
-
   const PlatformownerLinks = [
-     { href: "/admin/companies", label: "companies", icon: <Briefcase size={20} /> },
+    { href: "/admin/companies", label: "companies", icon: <Briefcase size={20} /> },
     { href: "/admin/subscription-plans", label: "subscription-plans", icon: <Badge size={20} /> },
     { href: "/admin/users", label: "users", icon: <Users size={20} /> },
-    
   ]
-
-
 
   const ownerLinks = [
     ...commonLinks,
-    { href: "/employees", label: "Employees", icon: <Users size={20} /> },
-    { href: "/teams", label: "Teams", icon: <UserPlus size={20} /> },
+    { href: "/employees", label: "Employees", icon: <UserPlus size={20} /> },
+    { href: "/teams", label: "Teams", icon: <Users size={20} />  },
     { href: "/attendance", label: "Attendance", icon: <Clock size={20} /> },
     { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
     { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
     { href: "/analytics", label: "Analytics", icon: <BarChart4 size={20} /> },
     { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
+    { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
     { href: "/business-settings", label: "Business Settings", icon: <Settings size={20} /> },
     { href: "/subscription", label: "subscription plan", icon: <CreditCard size={20} /> },
-    { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
   ]
 
   const hrLinks = [
     ...commonLinks,
-    { href: "/employees", label: "Employees", icon: <Users size={20} /> },
-    { href: "/teams", label: "Teams", icon: <UserPlus size={20} /> },
+    { href: "/employees", label: "Employees", icon: <UserPlus size={20} /> },
+    { href: "/teams", label: "Teams", icon: <Users size={20} />  },
     { href: "/attendance", label: "Attendance", icon: <Clock size={20} /> },
     { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
     { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
     { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
     { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
-
   ]
 
   const employeeLinks = [
@@ -217,15 +192,14 @@ export default function Sidebar({ onToggle }: SidebarProps) {
     { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
     { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
     { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
-     { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
-
+    { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
   ]
 
   let linksToRender = employeeLinks
   if (user?.role_id === 2) linksToRender = ownerLinks
   else if (user?.role_id === 3) linksToRender = hrLinks
-  else if(user?.role_id===1)linksToRender=PlatformownerLinks
-  
+  else if (user?.role_id === 1) linksToRender = PlatformownerLinks
+
   const getRoleName = () => {
     if (user?.role_id === 2) return "Owner"
     if (user?.role_id === 3) return "HR Manager"
@@ -347,6 +321,14 @@ export default function Sidebar({ onToggle }: SidebarProps) {
                   title={isCollapsed ? link.label : undefined}
                   onMouseEnter={() => setHoveredLink(link.href)}
                   onMouseLeave={() => setHoveredLink(null)}
+                  onClick={() => {
+                    // Close mobile menu when link is clicked
+                    setIsMobileMenuOpen(false)
+                    // Always collapse the sidebar when a link is clicked (both mobile and desktop)
+                    if (!isCollapsed) {
+                      setIsCollapsed(true)
+                    }
+                  }}
                 >
                   <span
                     className={cn(

@@ -160,11 +160,7 @@ export default function TeamTable({
   if (!teams || teams.length === 0) {
     return (
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white p-8 text-center shadow-sm">
-        <div className="mb-4 flex justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6148F4]/10">
-            <Users size={32} className="text-[#6148F4]" />
-          </div>
-        </div>
+         
         <h3 className="mb-1 text-lg font-medium text-gray-900">No teams found</h3>
         <p className="text-gray-500">Create your first team to get started</p>
       </div>
@@ -275,9 +271,7 @@ export default function TeamTable({
                 <td className="whitespace-nowrap px-6 py-4">
                   {team.leader ? (
                     <div className="flex items-center">
-                      <div className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#6148F4]/10">
-                        <User size={16} className="text-[#6148F4]" />
-                      </div>
+                      
                       <span className="text-sm font-medium">{team.leader.name}</span>
                     </div>
                   ) : (
@@ -289,9 +283,7 @@ export default function TeamTable({
                     <div className="relative flex items-center">
                       {/* Member stats */}
                       <div className="flex items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6148F4]/10">
-                          <Users size={16} className="text-[#6148F4]" />
-                        </div>
+                       
                         <div className="ml-3">
                           <div className="flex items-center">
                             <span className="text-sm font-medium text-gray-900">{team.members.length}</span>

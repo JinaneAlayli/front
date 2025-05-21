@@ -12,18 +12,37 @@ import {
   AlertTriangle,
   Calendar,
   Filter,
+  RefreshCw,
 } from "lucide-react"
 import api from "@/lib/api"
 import { toast } from "react-toastify"
 
+// Create a custom event for invitation updates
+export const INVITATION_UPDATED_EVENT = "invitation_updated"
+
 type InviteStatus = "all" | "pending" | "done" | "expired"
 
-export default function InvitedTable({ invites, onInviteDeleted }: { invites: any[]; onInviteDeleted?: () => void }) {
-  const [loading, setLoading] = useState<number | null>(null)
+export default function InvitedTable({ initialInvites = [] }: { initialInvites?: any[] }) {
+  const [invites, setInvites] = useState<any[]>(initialInvites)
+  const [loading, setLoading] = useState<boolean | number>(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [showLinkFor, setShowLinkFor] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<InviteStatus>("all")
   const [showFilters, setShowFilters] = useState(false)
+
+  // Fetch invitations data
+  const fetchInvitations = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get("/employee-invites")
+      setInvites(res.data)
+    } catch (error) {
+      console.error("Failed to fetch invitations:", error)
+      toast.error("Failed to load invitations")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Fetch current user on component mount
   useEffect(() => {
@@ -31,7 +50,37 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
       .get("/auth/me")
       .then((res) => setCurrentUser(res.data))
       .catch((err) => console.error("Failed to fetch current user", err))
+
+    // If no initial invites were provided, fetch them
+    if (initialInvites.length === 0) {
+      fetchInvitations()
+    }
+  }, [initialInvites.length])
+
+  // Listen for invitation update events
+  useEffect(() => {
+    const handleInvitationUpdated = () => {
+      fetchInvitations()
+    }
+
+    // Add event listener
+    window.addEventListener(INVITATION_UPDATED_EVENT, handleInvitationUpdated)
+
+    // Clean up
+    return () => {
+      window.removeEventListener(INVITATION_UPDATED_EVENT, handleInvitationUpdated)
+    }
   }, [])
+
+  // Reset showLinkFor if the selected invitation becomes accepted
+  useEffect(() => {
+    if (showLinkFor !== null) {
+      const selectedInvite = invites.find((invite) => invite.id === showLinkFor)
+      if (selectedInvite && (selectedInvite.accepted || isExpired(selectedInvite))) {
+        setShowLinkFor(null)
+      }
+    }
+  }, [invites, showLinkFor])
 
   // Function to get role name from ID
   const getRoleName = (roleId: number) => {
@@ -55,7 +104,7 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
 
   // Check if current user can delete invitations
   const canDelete = () => {
-    return currentUser && [1, 2, 3].includes(currentUser.id)
+    return currentUser && [1, 2, 3].includes(currentUser.role_id)
   }
 
   // Check if invitation is expired
@@ -104,14 +153,12 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
       await api.delete(`/employee-invites/${id}`)
       toast.success("Invitation cancelled successfully")
 
-      // Call the callback function if provided
-      if (onInviteDeleted) {
-        onInviteDeleted()
-      }
+      // Refresh the invitations list
+      fetchInvitations()
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to cancel invitation")
     } finally {
-      setLoading(null)
+      setLoading(false)
     }
   }
 
@@ -135,13 +182,24 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
             {filteredInvites.length} {filteredInvites.length === 1 ? "invitation" : "invitations"} found
           </div>
 
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-          >
-            <Filter size={16} className="mr-1.5 text-gray-500" />
-            Filters
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchInvitations}
+              disabled={loading === true}
+              className="flex items-center rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+              aria-label="Refresh invitations"
+            >
+              <RefreshCw size={16} className={`mr-1.5 text-gray-500 ${loading === true ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            >
+              <Filter size={16} className="mr-1.5 text-gray-500" />
+              Filters
+            </button>
+          </div>
         </div>
 
         {showFilters && (
@@ -272,7 +330,7 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4">
-                  {!isExpired(invite) ? (
+                  {!invite.accepted && !isExpired(invite) ? (
                     <div className="flex items-center">
                       {showLinkFor === invite.id ? (
                         <div className="flex items-center space-x-2">
@@ -299,7 +357,11 @@ export default function InvitedTable({ invites, onInviteDeleted }: { invites: an
                         </div>
                       ) : (
                         <button
-                          onClick={() => setShowLinkFor(invite.id)}
+                          onClick={() => {
+                            if (!invite.accepted && !isExpired(invite)) {
+                              setShowLinkFor(invite.id)
+                            }
+                          }}
                           className="flex items-center text-[#6148F4] hover:underline"
                         >
                           <LinkIcon size={14} className="mr-1" />

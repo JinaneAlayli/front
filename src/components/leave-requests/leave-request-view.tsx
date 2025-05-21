@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, MoreVertical, FileText, Edit } from "lucide-react"
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, FileText, Edit, Slash } from "lucide-react"
 
 interface User {
   id: number
@@ -24,7 +24,7 @@ interface LeaveRequest {
   manager?: User
 }
 
-interface LeaveRequestTableProps {
+interface LeaveRequestViewProps {
   requests: LeaveRequest[]
   isManager: boolean
   userId: number
@@ -34,7 +34,7 @@ interface LeaveRequestTableProps {
   onEdit: (request: LeaveRequest) => void
 }
 
-export default function LeaveRequestTable({
+export default function LeaveRequestView({
   requests,
   isManager,
   userId,
@@ -42,8 +42,7 @@ export default function LeaveRequestTable({
   onCancel,
   onDelete,
   onEdit,
-}: LeaveRequestTableProps) {
-  const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
+}: LeaveRequestViewProps) {
   const [expandedReasons, setExpandedReasons] = useState<number[]>([])
 
   // Function to format date
@@ -82,7 +81,7 @@ export default function LeaveRequestTable({
       case "refused":
         return (
           <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
-            <XCircle size={12} className="mr-1" />
+            <Slash size={12} className="mr-1" />
             Refused
           </span>
         )
@@ -147,19 +146,14 @@ export default function LeaveRequestTable({
       } else {
         await onStatusUpdate(requestId, action)
       }
-    } finally {
-      setActiveDropdown(null)
+    } catch (error) {
+      console.error("Action failed:", error)
     }
   }
 
   // Toggle reason expansion
   const toggleReasonExpansion = (id: number) => {
     setExpandedReasons((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
-  }
-
-  // Close dropdown when clicking outside
-  const handleClickOutside = () => {
-    setActiveDropdown(null)
   }
 
   // Get user's name and initial for avatar
@@ -292,90 +286,51 @@ export default function LeaveRequestTable({
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4">
-                  <div className="relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (activeDropdown === request.id) {
-                          setActiveDropdown(null)
-                        } else {
-                          setActiveDropdown(request.id)
-                          // Add event listener to close dropdown when clicking outside
-                          document.addEventListener("click", handleClickOutside, { once: true })
-                        }
-                      }}
-                      className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                      aria-label="Actions"
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-
-                    {activeDropdown === request.id && (
-                      <div className="absolute right-0 z-10 mt-1 w-48 rounded-md border border-gray-100 bg-white py-1 shadow-lg">
-                        {isManager && request.status === "pending" && (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleAction(request.id, "approved")
-                              }}
-                              className="flex w-full items-center px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50"
-                            >
-                              <CheckCircle size={14} className="mr-2" />
-                              Approve Request
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleAction(request.id, "refused")
-                              }}
-                              className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                            >
-                              <XCircle size={14} className="mr-2" />
-                              Refuse Request
-                            </button>
-                          </>
-                        )}
-                        {canEdit && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleAction(request.id, "edit")
-                            }}
-                            className="flex w-full items-center px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
-                          >
-                            <Edit size={14} className="mr-2" />
-                            Edit Request
-                          </button>
-                        )}
-                        {isOwner && request.status === "pending" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleAction(request.id, "cancel")
-                            }}
-                            className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                          >
-                            <XCircle size={14} className="mr-2" />
-                            Cancel Request
-                          </button>
-                        )}
-                        {isManager && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleAction(request.id, "delete")
-                            }}
-                            className="flex w-full items-center px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                          >
-                            <XCircle size={14} className="mr-2" />
-                            Delete Request
-                          </button>
-                        )}
-                        {(!isManager && !isOwner) || (request.status !== "pending" && !isManager && !canEdit) ? (
-                          <div className="px-4 py-2 text-sm text-gray-500">No actions available</div>
-                        ) : null}
-                      </div>
+                  <div className="flex items-center space-x-2">
+                    {isManager && request.status === "pending" && (
+                      <>
+                        <button
+                          onClick={() => handleAction(request.id, "approved")}
+                          className="rounded-full p-1.5 text-green-600 hover:bg-green-50"
+                          title="Approve Request"
+                        >
+                          <CheckCircle size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleAction(request.id, "refused")}
+                          className="rounded-full p-1.5 text-red-600 hover:bg-red-50"
+                          title="Refuse Request"
+                        >
+                          <Slash size={16} />
+                        </button>
+                      </>
+                    )}
+                    {canEdit && (
+                      <button
+                        onClick={() => handleAction(request.id, "edit")}
+                        className="rounded-full p-1.5 text-blue-600 hover:bg-blue-50"
+                        title="Edit Request"
+                      >
+                        <Edit size={16} />
+                      </button>
+                    )}
+                    {isOwner && request.status === "pending" && (
+                      <button
+                        onClick={() => handleAction(request.id, "cancel")}
+                        className="rounded-full p-1.5 text-gray-600 hover:bg-gray-50"
+                        title="Cancel Request"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    )}
+                    {isManager && (
+                      <button
+                        onClick={() => handleAction(request.id, "delete")}
+                        className="rounded-full p-1.5 text-red-600 hover:bg-red-50"
+                        title="Delete Request"
+                      >
+                        <XCircle size={16} />
+                      </button>
                     )}
                   </div>
                 </td>

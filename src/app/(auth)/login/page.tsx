@@ -128,12 +128,7 @@ export default function LoginPage() {
                 <label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs font-medium text-[#6148F4] transition-colors hover:text-[#5040d3]"
-                >
-                  Forgot password?
-                </Link>
+                
               </div>
               <div className="group relative">
                 <input
@@ -225,7 +220,7 @@ export default function LoginPage() {
 
           <div className="mt-8 text-center text-sm">
             Don't have an account?{" "}
-            <Link href="/auth/register" className="font-medium text-[#6148F4] transition-colors hover:text-[#5040d3]">
+            <Link href="/pricing" className="font-medium text-[#6148F4] transition-colors hover:text-[#5040d3]">
               Create an account
             </Link>
           </div>

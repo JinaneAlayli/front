@@ -286,17 +286,19 @@ export default function EmployeeTable({ searchTerm }: EmployeeTableProps) {
 
                   {/* Email */}
                   <td className="whitespace-nowrap px-6 py-4">
-                    {editingId === user.id ? (
-                      <input
-                        className="w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#6148F4]"
-                        value={form.email || ""}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      />
-                    ) : (
-                      <a href={`mailto:${user.email}`} className="text-[#6148F4] hover:underline">
-                        {user.email}
-                      </a>
-                    )}
+                  {editingId === user.id ? (
+                    <input
+                      type="text"
+                      className="w-full rounded border px-2 py-1 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+                      value={form.email || ""}
+                      readOnly
+                    />
+                  ) : (
+                    <a href={`mailto:${user.email}`} className="text-[#6148F4] hover:underline">
+                      {user.email}
+                    </a>
+                  )}
+
                   </td>
 
                   {/* Phone */}

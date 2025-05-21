@@ -6,9 +6,8 @@ import type { RootState } from "@/lib/redux/store"
 import api from "@/lib/api"
 import { toast } from "react-toastify"
 import LeaveRequestForm from "@/components/leave-requests/LeaveRequestForm"
-import LeaveRequestTable from "@/components/leave-requests/LeaveRequestTable"
-import LeaveRequestList from "@/components/leave-requests/LeaveRequestList"
-import { PlusCircle, Calendar, Filter, Search, LayoutGrid, LayoutList } from "lucide-react"
+import LeaveRequestView from "@/components/leave-requests/leave-request-view"
+import { PlusCircle, Calendar, Filter } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 // Define interfaces for our data types
@@ -46,8 +45,8 @@ export default function LeaveRequestsPage() {
     type: "",
     month: "",
     year: "",
+    employee: "",
   })
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const [editRequest, setEditRequest] = useState<LeaveRequest | null>(null)
 
   // Check if user is HR or owner (can manage all requests)
@@ -67,49 +66,44 @@ export default function LeaveRequestsPage() {
 
   // Function to fetch leave requests
   const fetchLeaveRequests = async () => {
-  setLoading(true)
-  try {
-    const endpoint = isManager ? "/leave-requests/all" : "/leave-requests/me"
+    setLoading(true)
+    try {
+      const endpoint = isManager ? "/leave-requests/all" : "/leave-requests/me"
 
-    const res = await api.get(endpoint)
+      const res = await api.get(endpoint)
 
-    const requestsWithUsers = await Promise.all(
-      res.data.map(async (request: LeaveRequest) => {
-        // If user is already included in the response, no need to fetch
-        if (request.user && request.user.name) {
-          return request
-        }
-
-        // Only managers (roles 2 or 3) are allowed to fetch extra user info
-        if (isManager) {
-          try {
-            const userInfo = await api.get(`/users/${request.user_id}`)
-            return {
-              ...request,
-              user: userInfo.data,
-            }
-          } catch (err) {
-            console.warn(`User fetch failed for ID ${request.user_id}`, err)
+      const requestsWithUsers = await Promise.all(
+        res.data.map(async (request: LeaveRequest) => {
+          // If user is already included in the response, no need to fetch
+          if (request.user && request.user.name) {
+            return request
           }
-        }
 
-        return request
-      })
-    )
+          // Only managers (roles 2 or 3) are allowed to fetch extra user info
+          if (isManager) {
+            try {
+              const userInfo = await api.get(`/users/${request.user_id}`)
+              return {
+                ...request,
+                user: userInfo.data,
+              }
+            } catch (err) {
+              console.warn(`User fetch failed for ID ${request.user_id}`, err)
+            }
+          }
 
-    setLeaveRequests(requestsWithUsers)
-  } catch (error) {
-    toast.error("Failed to fetch leave requests")
-    console.error("Failed to fetch leave requests:", error)
-  } finally {
-    setLoading(false)
+          return request
+        }),
+      )
+
+      setLeaveRequests(requestsWithUsers)
+    } catch (error) {
+      toast.error("Failed to fetch leave requests")
+      console.error("Failed to fetch leave requests:", error)
+    } finally {
+      setLoading(false)
+    }
   }
-}
-
-
-
-
-
 
   useEffect(() => {
     // Block superadmin (role_id 1) from accessing leave requests
@@ -130,7 +124,7 @@ export default function LeaveRequestsPage() {
     setOpenModal(false)
     setEditRequest(null)
     fetchLeaveRequests()
-   }
+  }
 
   const handleStatusUpdate = async (id: number, status: string) => {
     try {
@@ -195,7 +189,9 @@ export default function LeaveRequestsPage() {
     // Filter by year
     const matchesYear = filters.year === "" || request.start_date.startsWith(filters.year)
 
-    return matchesSearch && matchesStatus && matchesType && matchesMonth && matchesYear
+    const matchesEmployee = filters.employee === "" || request.user_id.toString() === filters.employee
+
+    return matchesSearch && matchesStatus && matchesType && matchesMonth && matchesYear && matchesEmployee
   })
 
   // Get unique types for the type filter
@@ -249,7 +245,6 @@ export default function LeaveRequestsPage() {
           </nav>
         </div>
 
-
         {/* Filters */}
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
           <div className="border-b border-gray-100 bg-gray-50 px-6 py-3">
@@ -271,8 +266,6 @@ export default function LeaveRequestsPage() {
 
             {showFilters && (
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-               
-
                 {/* Status filter */}
                 <div>
                   <label htmlFor="status-filter" className="mb-1 block text-xs font-medium text-gray-700">
@@ -291,6 +284,30 @@ export default function LeaveRequestsPage() {
                     <option value="canceled">Canceled</option>
                   </select>
                 </div>
+
+                {isManager && (
+                  <div>
+                    <label htmlFor="employee-filter" className="mb-1 block text-xs font-medium text-gray-700">
+                      Employee
+                    </label>
+                    <select
+                      id="employee-filter"
+                      value={filters.employee || ""}
+                      onChange={(e) => setFilters({ ...filters, employee: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#6148F4] focus:outline-none focus:ring-1 focus:ring-[#6148F4]/50"
+                    >
+                      <option value="">All Employees</option>
+                      {[...new Set(leaveRequests.map((r) => r.user?.id))].filter(Boolean).map((userId) => {
+                        const user = leaveRequests.find((r) => r.user?.id === userId)?.user
+                        return user ? (
+                          <option key={user.id} value={user.id}>
+                            {user.name}
+                          </option>
+                        ) : null
+                      })}
+                    </select>
+                  </div>
+                )}
 
                 {/* Type filter */}
                 <div>
@@ -363,7 +380,7 @@ export default function LeaveRequestsPage() {
                 <div className="flex items-end sm:col-span-2 lg:col-span-3">
                   <button
                     onClick={() => {
-                      setFilters({ status: "", type: "", month: "", year: "" })
+                      setFilters({ status: "", type: "", month: "", year: "", employee: "" })
                       setSearchTerm("")
                     }}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
@@ -380,18 +397,8 @@ export default function LeaveRequestsPage() {
             <div className="flex h-64 items-center justify-center">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#6148F4] border-t-transparent"></div>
             </div>
-          ) : viewMode === "table" ? (
-            <LeaveRequestTable
-              requests={filteredRequests}
-              isManager={isManager}
-              userId={user?.id}
-              onStatusUpdate={handleStatusUpdate}
-              onCancel={handleCancel}
-              onDelete={handleDelete}
-              onEdit={handleEdit}
-            />
           ) : (
-            <LeaveRequestList
+            <LeaveRequestView
               requests={filteredRequests}
               isManager={isManager}
               userId={user?.id}
