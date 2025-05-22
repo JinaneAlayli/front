@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { CheckCircle, AlertTriangle, User, Award } from "lucide-react"
-import type { AnalyticsData, Task, ApiUser } from "@/app/types/analytics"
+import type { AnalyticsData, Task, ApiUser } from "@/types/analytics"
 
 interface PerformanceTabProps {
   analyticsData: AnalyticsData

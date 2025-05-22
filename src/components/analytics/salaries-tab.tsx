@@ -1,5 +1,5 @@
 import { PieChart } from "lucide-react"
-import type { AnalyticsData } from "@/app/types/analytics"
+import type { AnalyticsData } from "@/types/analytics"
 
 interface SalariesTabProps {
   analyticsData: AnalyticsData
