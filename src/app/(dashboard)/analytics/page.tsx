@@ -6,191 +6,26 @@ import { toast } from "react-toastify"
 import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import api from "@/lib/api"
-import {
-  BarChart3,
-  Clock,
-  Users,
-  TrendingUp,
-  Download,
-  Award,
-  CheckCircle,
-  AlertTriangle,
-  User,
-  PieChart,
-} from "lucide-react"
+import { BarChart3, Clock, Users, TrendingUp, Download } from "lucide-react"
 
-// Define types for API responses
-interface ApiUser {
-  id: number
-  name: string
-  position?: string
-  team_id?: number
-  company_id?: number
-  role_id?: number
-  email?: string
-  profile_img?: string
-}
+// Import components
+import PerformanceTab from "@/components/analytics/performance-tab"
+import AttendanceTab from "@/components/analytics/attendance-tab"
+import TeamsTab from "@/components/analytics/teams-tab"
+import SalariesTab from "@/components/analytics/salaries-tab"
 
-interface Task {
-  id: number
-  title: string
-  description?: string
-  status: string
-  assigned_to: number
-  created_by: number
-  created_at: string
-  updated_at: string
-  due_date?: string
-  priority?: string
-}
-
-interface AttendanceRecord {
-  id: number
-  user_id: number
-  check_in_time: string
-  check_out_time?: string
-  date: string
-}
-
-interface Team {
-  id: number
-  name: string
-  company_id: number
-  created_at: string
-  updated_at: string
-}
-
-interface Salary {
-  id: number
-  user_id: number
-  amount: number
-  currency: string
-  effective_date: string
-  end_date?: string
-  is_active: boolean
-  base_salary?: number
-  bonus?: number
-  overtime?: number
-  deductions?: number
-  month?: number
-  year?: number
-  user?: {
-    id: number
-    name: string
-    position?: string
-  }
-}
-
-interface BusinessSetting {
-  id: number
-  company_id: number
-  salary_cycle: string
-  workday_start: string
-  workday_end: string
-  annual_leave_days: number
-  sick_leave_days: number
-  overtime_rate: number
-  currency: string
-  created_at: Date
-  updated_at: Date
-}
-
-// Define types for employee performance metrics
-interface EmployeePerformance {
-  id: number
-  name: string
-  position: string
-  avatar?: string
-  tasksCompleted: number
-  tasksTotal: number
-  completionRate: number
-  onTimeCompletion: number
-  lateCompletion: number
-  attendanceRate: number
-  lateArrivals: number
-  overallScore: number
-}
-
-// Define types for our analytics data
-interface AnalyticsSummary {
-  totalEmployees?: number
-  totalTasks?: number
-  completedTasks?: number
-  pendingTasks?: number
-  attendanceRate?: number
-  lateArrivals?: number
-  totalTeams?: number
-  avgTeamSize?: number
-  totalSalaryBudget?: number
-  avgSalary?: number
-}
-
-interface AnalyticsData {
-  summary: Partial<AnalyticsSummary>
-  employeePerformance?: EmployeePerformance[]
-  attendanceIssues?: {
-    id: number
-    name: string
-    position: string
-    avatar?: string
-    lateCount: number
-    absenceCount: number
-    avgLateMinutes: number
-  }[]
-  teamPerformance?: {
-    id: number
-    name: string
-    score: number
-    taskCompletion: {
-      assigned: number
-      completed: number
-    }
-  }[]
-  salaryDistribution?: {
-    range: string
-    count: number
-  }[]
-  businessSettings?: BusinessSetting
-  salaryData?: {
-    allSalaries: Salary[]
-    departmentSalaries: {
-      department: string
-      avgSalary: number
-      count: number
-    }[]
-    topEarners: Salary[]
-    compensationBreakdown: {
-      baseSalary: number
-      bonus: number
-      overtime: number
-      deductions: number
-      total: number
-    }
-    monthlySalaries?: {
-      month: number
-      year: number
-      avgSalary: number
-    }[]
-  }
-}
-
-// Define type for task data map
-interface UserTaskData {
-  completed: number
-  pending: number
-  late: number
-  onTime: number
-  total: number
-}
-
-// Define type for attendance data map
-interface UserAttendanceData {
-  lateCount: number
-  absenceCount: number
-  totalLateMinutes: number
-  presentCount: number
-  totalDays: number
-}
+// Import types
+import type {
+  AnalyticsData,
+  Task,
+  ApiUser,
+  AttendanceRecord,
+  Team,
+  Salary,
+  UserTaskData,
+  UserAttendanceData,
+  EmployeePerformance,
+} from "@/types/analytics"
 
 export default function AnalyticsPage() {
   const router = useRouter()
@@ -201,6 +36,8 @@ export default function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
     summary: {},
   })
+  const [allTasks, setAllTasks] = useState<Task[]>([])
+  const [allUsers, setAllUsers] = useState<ApiUser[]>([])
 
   // Check if user has permission to access this page
   useEffect(() => {
@@ -222,12 +59,13 @@ export default function AnalyticsPage() {
     setLoading(true)
     try {
       // Create a summary object to store all analytics data
-      const summary: Partial<AnalyticsSummary> = {}
+      const summary: Partial<AnalyticsData["summary"]> = {}
       const analyticsData: AnalyticsData = { summary }
 
       // Fetch users data to get employees from the same company
       const usersResponse = await api.get("/users")
       const allUsers: ApiUser[] = usersResponse.data
+      setAllUsers(allUsers)
 
       // Filter users by company_id to get only employees from the same company
       const companyUsers = allUsers.filter((u) => u.company_id === user?.company_id)
@@ -236,18 +74,17 @@ export default function AnalyticsPage() {
       // Fetch tasks data for the company
       const tasksResponse = await api.get("/tasks")
       const allTasks: Task[] = tasksResponse.data
+      setAllTasks(allTasks)
 
       // Filter tasks by assigned_to users in the company
       const companyUserIds = companyUsers.map((u) => u.id)
       const companyTasks = allTasks.filter(
-        (task) => companyUserIds.includes(task.assigned_to) || companyUserIds.includes(task.created_by),
+        (task) => companyUserIds.includes(task.user_id) || companyUserIds.includes(task.created_by),
       )
 
       summary.totalTasks = companyTasks.length
-      summary.completedTasks = companyTasks.filter((task) => task.status === "completed").length
-      summary.pendingTasks = companyTasks.filter(
-        (task) => task.status === "pending" || task.status === "in_progress",
-      ).length
+      summary.completedTasks = companyTasks.filter((task) => task.completed).length
+      summary.pendingTasks = companyTasks.filter((task) => !task.completed).length
 
       // Fetch attendance data
       const attendanceResponse = await api.get("/attendance")
@@ -269,35 +106,46 @@ export default function AnalyticsPage() {
             late: 0,
             onTime: 0,
             total: 0,
+            tasksCreated: 0,
+            tasksCompleted: 0,
+            completedBy: [],
           })
         }
       })
 
       // Calculate task metrics for each user
       companyTasks.forEach((task) => {
-        if (!userTaskMap.has(task.assigned_to)) {
-          return
+        // Track tasks assigned to users
+        if (task.user_id && userTaskMap.has(task.user_id)) {
+          const userData = userTaskMap.get(task.user_id)!
+          userData.total++
+
+          if (task.completed) {
+            userData.completed++
+
+            // Check if task was completed on time or late
+            const dueDate = task.due_date ? new Date(task.due_date) : null
+            const completedDate = new Date(task.created_at)
+
+            if (dueDate && completedDate > dueDate) {
+              userData.late++
+            } else {
+              userData.onTime++
+            }
+          } else {
+            userData.pending++
+          }
         }
 
-        const userData = userTaskMap.get(task.assigned_to)
-        if (!userData) return
+        // Track tasks created by users
+        if (task.created_by && userTaskMap.has(task.created_by)) {
+          const userData = userTaskMap.get(task.created_by)!
+          userData.tasksCreated++
 
-        userData.total++
-
-        if (task.status === "completed") {
-          userData.completed++
-
-          // Check if task was completed on time or late
-          const dueDate = task.due_date ? new Date(task.due_date) : null
-          const completedDate = new Date(task.updated_at)
-
-          if (dueDate && completedDate > dueDate) {
-            userData.late++
-          } else {
-            userData.onTime++
+          // If the task is completed and was created by this user, count it as completed by them
+          if (task.completed) {
+            userData.tasksCompleted++
           }
-        } else if (task.status === "pending" || task.status === "in_progress") {
-          userData.pending++
         }
       })
 
@@ -321,13 +169,11 @@ export default function AnalyticsPage() {
           return
         }
 
-        const userData = userAttendanceMap.get(record.user_id)
-        if (!userData) return
-
+        const userData = userAttendanceMap.get(record.user_id)!
         userData.presentCount++
 
         // Check if check-in was late
-        const checkInTime = new Date(record.check_in_time)
+        const checkInTime = new Date(`2023-01-01T${record.check_in}`)
         const workStartHour = 9
 
         if (
@@ -355,7 +201,7 @@ export default function AnalyticsPage() {
 
       // Calculate late arrivals
       summary.lateArrivals = companyAttendance.filter((record) => {
-        const checkInTime = new Date(record.check_in_time)
+        const checkInTime = new Date(`2023-01-01T${record.check_in}`)
         const workStartHour = 9 // Assuming work starts at 9 AM
         return (
           checkInTime.getHours() > workStartHour ||
@@ -364,51 +210,53 @@ export default function AnalyticsPage() {
       }).length
 
       // Create employee performance array
-      const employeePerformance: EmployeePerformance[] = []
+      const employeePerformance = companyUsers
+        .filter((user) => user.id)
+        .map((user) => {
+          const taskData = userTaskMap.get(user.id!)
+          const attendanceData = userAttendanceMap.get(user.id!)
 
-      companyUsers.forEach((user) => {
-        if (!user.id) return
+          if (!taskData || !attendanceData) {
+            return null
+          }
 
-        const taskData = userTaskMap.get(user.id)
-        const attendanceData = userAttendanceMap.get(user.id)
+          // Calculate completion rate
+          const completionRate = taskData.total > 0 ? Math.round((taskData.completed / taskData.total) * 100) : 0
 
-        if (!taskData || !attendanceData) return
+          // Calculate on-time completion rate
+          const onTimeRate = taskData.completed > 0 ? Math.round((taskData.onTime / taskData.completed) * 100) : 0
 
-        // Calculate completion rate
-        const completionRate = taskData.total > 0 ? Math.round((taskData.completed / taskData.total) * 100) : 0
+          // Calculate attendance rate
+          const attendanceRate =
+            attendanceData.totalDays > 0
+              ? Math.round((attendanceData.presentCount / attendanceData.totalDays) * 100)
+              : 0
 
-        // Calculate on-time completion rate
-        const onTimeRate = taskData.completed > 0 ? Math.round((taskData.onTime / taskData.completed) * 100) : 0
+          // Calculate overall performance score (weighted average)
+          const taskWeight = 0.5
+          const attendanceWeight = 0.3
+          const onTimeWeight = 0.2
 
-        // Calculate attendance rate
-        const attendanceRate =
-          attendanceData.totalDays > 0 ? Math.round((attendanceData.presentCount / attendanceData.totalDays) * 100) : 0
+          const overallScore = Math.round(
+            completionRate * taskWeight + attendanceRate * attendanceWeight + onTimeRate * onTimeWeight,
+          )
 
-        // Calculate overall performance score (weighted average)
-        const taskWeight = 0.5
-        const attendanceWeight = 0.3
-        const onTimeWeight = 0.2
-
-        const overallScore = Math.round(
-          completionRate * taskWeight + attendanceRate * attendanceWeight + onTimeRate * onTimeWeight,
-        )
-
-        // Use the name field directly instead of constructing from first_name and last_name
-        employeePerformance.push({
-          id: user.id,
-          name: user.name || "Unknown User",
-          position: user.position || "Employee",
-          avatar: user.profile_img || undefined, // Use profile_img instead of avatar_url
-          tasksCompleted: taskData.completed,
-          tasksTotal: taskData.total,
-          completionRate,
-          onTimeCompletion: onTimeRate,
-          lateCompletion: taskData.late,
-          attendanceRate,
-          lateArrivals: attendanceData.lateCount,
-          overallScore,
+          return {
+            id: user.id!,
+            name: user.name || "Unknown User",
+            position: user.position || "Employee",
+            avatar: user.profile_img || undefined,
+            tasksCompleted: taskData.completed,
+            tasksTotal: taskData.total,
+            completionRate,
+            onTimeCompletion: onTimeRate,
+            lateCompletion: taskData.late,
+            attendanceRate,
+            lateArrivals: attendanceData.lateCount,
+            overallScore,
+          }
         })
-      })
+        .filter(Boolean) as EmployeePerformance[]
 
       // Sort employee performance by overall score (descending)
       analyticsData.employeePerformance = employeePerformance.sort((a, b) => b.overallScore - a.overallScore)
@@ -452,10 +300,10 @@ export default function AnalyticsPage() {
 
       // Calculate team performance
       const teamPerformance = companyTeams.map((team) => {
-        const teamMembers = companyUsers.filter((user) => user.team_id === team.id).map((user) => user.id)
-        const teamTasks = companyTasks.filter((task) => task.assigned_to && teamMembers.includes(task.assigned_to))
+        const teamMembers = companyUsers.filter((user) => user.team_id === team.id).map((user) => user.id!)
+        const teamTasks = companyTasks.filter((task) => task.user_id && teamMembers.includes(task.user_id))
         const assigned = teamTasks.length
-        const completed = teamTasks.filter((task) => task.status === "completed").length
+        const completed = teamTasks.filter((task) => task.completed).length
 
         // Calculate team score based on task completion and other metrics
         const completionRate = assigned > 0 ? (completed / assigned) * 100 : 0
@@ -731,34 +579,6 @@ export default function AnalyticsPage() {
     return Math.round((value / total) * 100)
   }
 
-  // Calculate stroke dasharray and dashoffset for pie chart segments
-  const calculatePieSegment = (percentage: number, index: number, total = 100) => {
-    const radius = 40
-    const circumference = 2 * Math.PI * radius
-    const strokeDasharray = circumference
-
-    // Calculate the offset based on previous segments
-    let previousPercentage = 0
-    for (let i = 0; i < index; i++) {
-      previousPercentage += getCompensationPercentage(
-        [
-          analyticsData.salaryData?.compensationBreakdown.baseSalary || 0,
-          analyticsData.salaryData?.compensationBreakdown.bonus || 0,
-          analyticsData.salaryData?.compensationBreakdown.overtime || 0,
-          analyticsData.salaryData?.compensationBreakdown.deductions || 0,
-        ][i],
-        analyticsData.salaryData?.compensationBreakdown.total || 1,
-      )
-    }
-
-    const strokeDashoffset = circumference - (previousPercentage / 100) * circumference
-
-    return {
-      strokeDasharray,
-      strokeDashoffset,
-    }
-  }
-
   // Update the loading state to be simpler
   if (loading) {
     return (
@@ -831,738 +651,22 @@ export default function AnalyticsPage() {
           </nav>
         </div>
       </div>
+
+      {/* Render the appropriate tab component based on activeTab */}
       {activeTab === "performance" && (
-        <div className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Total Employees</h3>
-              {analyticsData?.summary?.totalEmployees !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.totalEmployees}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Total Tasks</h3>
-              {analyticsData?.summary?.totalTasks !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.totalTasks}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Completed Tasks</h3>
-              {analyticsData?.summary?.completedTasks !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.completedTasks}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Pending Tasks</h3>
-              {analyticsData?.summary?.pendingTasks !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.pendingTasks}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-lg font-medium">Employee Performance</h3>
-            {analyticsData?.employeePerformance && analyticsData.employeePerformance.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b text-left text-xs font-medium uppercase text-gray-500">
-                      <th className="pb-3 pl-4">Employee</th>
-                      <th className="pb-3">Tasks</th>
-                      <th className="pb-3">Completion</th>
-                      <th className="pb-3">On-Time</th>
-                      <th className="pb-3">Attendance</th>
-                      <th className="pb-3 pr-4">Overall Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analyticsData.employeePerformance.map((employee) => (
-                      <tr key={employee.id} className="border-b last:border-0 hover:bg-gray-50">
-                        <td className="py-3 pl-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 flex-shrink-0">
-                              {employee.avatar ? (
-                                <img
-                                  src={employee.avatar || "/placeholder.svg"}
-                                  alt={employee.name}
-                                  className="h-10 w-10 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6148F4]/10">
-                                  <User size={20} className="text-[#6148F4]" />
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{employee.name || "Unknown User"}</p>
-                              <p className="text-xs text-gray-500">{employee.position || "Employee"}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {employee.tasksCompleted}/{employee.tasksTotal}
-                            </span>
-                            <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-gray-200">
-                              <div
-                                className="h-full bg-green-500"
-                                style={{
-                                  width:
-                                    employee.tasksTotal > 0
-                                      ? `${(employee.tasksCompleted / employee.tasksTotal) * 100}%`
-                                      : "0%",
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                                employee.completionRate >= 75
-                                  ? "bg-green-100 text-green-700"
-                                  : employee.completionRate >= 50
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {employee.completionRate >= 75 ? (
-                                <CheckCircle size={14} />
-                              ) : employee.completionRate >= 50 ? (
-                                <AlertTriangle size={14} />
-                              ) : (
-                                <AlertTriangle size={14} />
-                              )}
-                            </span>
-                            <span>{employee.completionRate}%</span>
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                                employee.onTimeCompletion >= 75
-                                  ? "bg-green-100 text-green-700"
-                                  : employee.onTimeCompletion >= 50
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {employee.onTimeCompletion >= 75 ? (
-                                <CheckCircle size={14} />
-                              ) : employee.onTimeCompletion >= 50 ? (
-                                <AlertTriangle size={14} />
-                              ) : (
-                                <AlertTriangle size={14} />
-                              )}
-                            </span>
-                            <span>{employee.onTimeCompletion}%</span>
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                                employee.attendanceRate >= 90
-                                  ? "bg-green-100 text-green-700"
-                                  : employee.attendanceRate >= 75
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {employee.attendanceRate >= 90 ? (
-                                <CheckCircle size={14} />
-                              ) : employee.attendanceRate >= 75 ? (
-                                <AlertTriangle size={14} />
-                              ) : (
-                                <AlertTriangle size={14} />
-                              )}
-                            </span>
-                            <span>{employee.attendanceRate}%</span>
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                              <Award
-                                size={16}
-                                className={
-                                  employee.overallScore >= 80
-                                    ? "text-green-500"
-                                    : employee.overallScore >= 60
-                                      ? "text-yellow-500"
-                                      : "text-red-500"
-                                }
-                              />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{employee.overallScore}/100</span>
-                              <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
-                                <div
-                                  className={`h-full ${
-                                    employee.overallScore >= 80
-                                      ? "bg-green-500"
-                                      : employee.overallScore >= 60
-                                        ? "bg-yellow-500"
-                                        : "bg-red-500"
-                                  }`}
-                                  style={{ width: `${employee.overallScore}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex h-40 items-center justify-center text-gray-400">
-                <p>No data available</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <PerformanceTab analyticsData={analyticsData} tasks={allTasks} users={allUsers} />
       )}
-      {activeTab === "attendance" && (
-        <div className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Avg. Attendance Rate</h3>
-              {analyticsData?.summary?.attendanceRate !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.attendanceRate}%</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Late Check-ins</h3>
-              {analyticsData?.summary?.lateArrivals !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.lateArrivals}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Total Employees</h3>
-              {analyticsData?.summary?.totalEmployees !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.totalEmployees}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Working Days</h3>
-              <p className="text-2xl font-bold">20</p>
-            </div>
-          </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-lg font-medium">Attendance Issues</h3>
-            {analyticsData?.attendanceIssues && analyticsData.attendanceIssues.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b text-left text-xs font-medium uppercase text-gray-500">
-                      <th className="pb-3 pl-4">Employee</th>
-                      <th className="pb-3">Late Check-ins</th>
-                      <th className="pb-3">Absences</th>
-                      <th className="pb-3 pr-4">Avg. Late (min)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analyticsData.attendanceIssues.map((employee) => (
-                      <tr key={employee.id} className="border-b last:border-0 hover:bg-gray-50">
-                        <td className="py-3 pl-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 flex-shrink-0">
-                              {employee.avatar ? (
-                                <img
-                                  src={employee.avatar || "/placeholder.svg"}
-                                  alt={employee.name}
-                                  className="h-10 w-10 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6148F4]/10">
-                                  <User size={20} className="text-[#6148F4]" />
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{employee.name || "Unknown User"}</p>
-                              <p className="text-xs text-gray-500">{employee.position || "Employee"}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              employee.lateCount > 5
-                                ? "bg-red-100 text-red-800"
-                                : employee.lateCount > 3
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {employee.lateCount}
-                          </span>
-                        </td>
-                        <td className="py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              employee.absenceCount > 3
-                                ? "bg-red-100 text-red-800"
-                                : employee.absenceCount > 1
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {employee.absenceCount}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              employee.avgLateMinutes > 30
-                                ? "bg-red-100 text-red-800"
-                                : employee.avgLateMinutes > 15
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {employee.avgLateMinutes} min
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex h-40 items-center justify-center text-gray-400">
-                <p>No data available</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      {activeTab === "teams" && (
-        <div className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Total Teams</h3>
-              {analyticsData?.summary?.totalTeams !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.totalTeams}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Avg. Team Size</h3>
-              {analyticsData?.summary?.avgTeamSize !== undefined ? (
-                <p className="text-2xl font-bold">{analyticsData.summary.avgTeamSize}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Best Performing Team</h3>
-              {analyticsData?.teamPerformance && analyticsData.teamPerformance.length > 0 ? (
-                <p className="text-2xl font-bold">{analyticsData.teamPerformance[0].name}</p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-medium text-gray-500">Needs Improvement</h3>
-              {analyticsData?.teamPerformance && analyticsData.teamPerformance.length > 1 ? (
-                <p className="text-2xl font-bold">
-                  {analyticsData.teamPerformance[analyticsData.teamPerformance.length - 1].name}
-                </p>
-              ) : (
-                <p className="text-lg text-gray-400">No data available</p>
-              )}
-            </div>
-          </div>
+      {activeTab === "attendance" && <AttendanceTab analyticsData={analyticsData} />}
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-lg font-medium">Team Performance</h3>
-            {analyticsData?.teamPerformance && analyticsData.teamPerformance.length > 0 ? (
-              <div className="space-y-6">
-                {analyticsData.teamPerformance.map((team) => (
-                  <div key={team.id} className="rounded-xl border p-4 hover:bg-gray-50">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                          <Users size={18} />
-                        </div>
-                        <h4 className="font-medium">{team.name}</h4>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            team.score >= 80
-                              ? "bg-green-100 text-green-800"
-                              : team.score >= 60
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {team.score}/100
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Task Completion</p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                            <div
-                              className={`h-full rounded-full ${
-                                team.taskCompletion.assigned > 0 &&
-                                team.taskCompletion.completed / team.taskCompletion.assigned > 0.8
-                                  ? "bg-green-500"
-                                  : team.taskCompletion.assigned > 0 &&
-                                      team.taskCompletion.completed / team.taskCompletion.assigned > 0.6
-                                    ? "bg-yellow-500"
-                                    : "bg-red-500"
-                              }`}
-                              style={{
-                                width:
-                                  team.taskCompletion.assigned > 0
-                                    ? `${(team.taskCompletion.completed / team.taskCompletion.assigned) * 100}%`
-                                    : "0%",
-                              }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-medium">
-                            {team.taskCompletion.assigned > 0
-                              ? Math.round((team.taskCompletion.completed / team.taskCompletion.assigned) * 100)
-                              : 0}
-                            %
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {team.taskCompletion.completed}/{team.taskCompletion.assigned} tasks completed
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Performance Score</p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                            <div
-                              className={`h-full rounded-full ${
-                                team.score >= 80 ? "bg-green-500" : team.score >= 60 ? "bg-yellow-500" : "bg-red-500"
-                              }`}
-                              style={{ width: `${team.score}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-medium">{team.score}/100</span>
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {team.score >= 80 ? "Excellent" : team.score >= 60 ? "Good" : "Needs Improvement"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex h-40 items-center justify-center text-gray-400">
-                <p>No data available</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {activeTab === "teams" && <TeamsTab analyticsData={analyticsData} />}
+
       {activeTab === "salaries" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-6">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="mb-1 text-sm font-medium text-gray-500">Total Salary Budget</h3>
-                {analyticsData?.summary?.totalSalaryBudget !== undefined ? (
-                  <p className="text-2xl font-bold">{formatCurrency(analyticsData.summary.totalSalaryBudget)}</p>
-                ) : (
-                  <p className="text-lg text-gray-400">No data available</p>
-                )}
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="mb-1 text-sm font-medium text-gray-500">Avg. Salary</h3>
-                {analyticsData?.summary?.avgSalary !== undefined ? (
-                  <p className="text-2xl font-bold">{formatCurrency(analyticsData.summary.avgSalary)}</p>
-                ) : (
-                  <p className="text-lg text-gray-400">No data available</p>
-                )}
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="mb-1 text-sm font-medium text-gray-500">Total Employees</h3>
-                {analyticsData?.summary?.totalEmployees !== undefined ? (
-                  <p className="text-2xl font-bold">{analyticsData.summary.totalEmployees}</p>
-                ) : (
-                  <p className="text-lg text-gray-400">No data available</p>
-                )}
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="mb-1 text-sm font-medium text-gray-500">Salary Ranges</h3>
-                {analyticsData?.salaryDistribution && analyticsData.salaryDistribution.length > 0 ? (
-                  <p className="text-2xl font-bold">{analyticsData.salaryDistribution.length}</p>
-                ) : (
-                  <p className="text-lg text-gray-400">No data available</p>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-lg font-medium">Compensation Insights</h3>
-              {analyticsData?.salaryData ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {/* Compensation Components Chart - This will be replaced by the updated version above */}
-
-                  {/* Compensation Components Chart */}
-                  <div className="h-auto rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h4 className="mb-4 text-base font-medium text-gray-700">Compensation Components</h4>
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="relative h-64 w-64">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500">Total Budget</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                              {analyticsData?.summary?.totalSalaryBudget !== undefined
-                                ? formatCurrency(analyticsData.summary.totalSalaryBudget)
-                                : "$0"}
-                            </p>
-                          </div>
-                        </div>
-                        {analyticsData.salaryData?.compensationBreakdown.total > 0 ? (
-                          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                            {/* Base Salary Segment */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              fill="none"
-                              stroke="#6148F4"
-                              strokeWidth="12"
-                              strokeDasharray="251.2"
-                              strokeDashoffset="0"
-                              className="opacity-90"
-                            />
-                            {/* Bonus Segment */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              fill="none"
-                              stroke="#38BDF8"
-                              strokeWidth="12"
-                              strokeDasharray="251.2"
-                              strokeDashoffset={
-                                251.2 *
-                                (1 -
-                                  getCompensationPercentage(
-                                    analyticsData.salaryData.compensationBreakdown.baseSalary,
-                                    analyticsData.salaryData.compensationBreakdown.total,
-                                  ) /
-                                    100)
-                              }
-                              className="opacity-90"
-                            />
-                            {/* Overtime Segment */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              fill="none"
-                              stroke="#4ADE80"
-                              strokeWidth="12"
-                              strokeDasharray="251.2"
-                              strokeDashoffset={
-                                251.2 *
-                                (1 -
-                                  (getCompensationPercentage(
-                                    analyticsData.salaryData.compensationBreakdown.baseSalary,
-                                    analyticsData.salaryData.compensationBreakdown.total,
-                                  ) +
-                                    getCompensationPercentage(
-                                      analyticsData.salaryData.compensationBreakdown.bonus,
-                                      analyticsData.salaryData.compensationBreakdown.total,
-                                    )) /
-                                    100)
-                              }
-                              className="opacity-90"
-                            />
-                            {/* Deductions Segment */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              fill="none"
-                              stroke="#F87171"
-                              strokeWidth="12"
-                              strokeDasharray="251.2"
-                              strokeDashoffset={
-                                251.2 *
-                                (1 -
-                                  (getCompensationPercentage(
-                                    analyticsData.salaryData.compensationBreakdown.baseSalary,
-                                    analyticsData.salaryData.compensationBreakdown.total,
-                                  ) +
-                                    getCompensationPercentage(
-                                      analyticsData.salaryData.compensationBreakdown.bonus,
-                                      analyticsData.salaryData.compensationBreakdown.total,
-                                    ) +
-                                    getCompensationPercentage(
-                                      analyticsData.salaryData.compensationBreakdown.overtime,
-                                      analyticsData.salaryData.compensationBreakdown.total,
-                                    )) /
-                                    100)
-                              }
-                              className="opacity-90"
-                            />
-                          </svg>
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <PieChart className="h-16 w-16 text-gray-200" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-6 flex flex-wrap items-center justify-center gap-6">
-                        <div className="flex items-center">
-                          <div className="mr-2 h-3 w-3 rounded-full bg-[#6148F4]"></div>
-                          <span className="text-sm text-gray-600">
-                            Base Salary (
-                            {getCompensationPercentage(
-                              analyticsData.salaryData?.compensationBreakdown.baseSalary || 0,
-                              analyticsData.salaryData?.compensationBreakdown.total || 1,
-                            )}
-                            %)
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <div className="mr-2 h-3 w-3 rounded-full bg-[#38BDF8]"></div>
-                          <span className="text-sm text-gray-600">
-                            Bonuses (
-                            {getCompensationPercentage(
-                              analyticsData.salaryData?.compensationBreakdown.bonus || 0,
-                              analyticsData.salaryData?.compensationBreakdown.total || 1,
-                            )}
-                            %)
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <div className="mr-2 h-3 w-3 rounded-full bg-[#4ADE80]"></div>
-                          <span className="text-sm text-gray-600">
-                            Overtime (
-                            {getCompensationPercentage(
-                              analyticsData.salaryData?.compensationBreakdown.overtime || 0,
-                              analyticsData.salaryData?.compensationBreakdown.total || 1,
-                            )}
-                            %)
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <div className="mr-2 h-3 w-3 rounded-full bg-[#F87171]"></div>
-                          <span className="text-sm text-gray-600">
-                            Deductions (
-                            {getCompensationPercentage(
-                              analyticsData.salaryData?.compensationBreakdown.deductions || 0,
-                              analyticsData.salaryData?.compensationBreakdown.total || 1,
-                            )}
-                            %)
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Top Earners List */}
-                  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <h4 className="mb-2 text-sm font-medium text-gray-700">Top Earners</h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b text-left text-xs font-medium uppercase text-gray-500">
-                            <th className="pb-3 pl-4">Employee</th>
-                            <th className="pb-3">Salary</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {analyticsData.salaryData.topEarners.map((salary) => (
-                            <tr key={salary.id} className="border-b last:border-0 hover:bg-gray-50">
-                              <td className="py-3 pl-4">{salary.user?.name || "Unknown"}</td>
-                              <td className="py-3">
-                                {formatCurrency(
-                                  Number(salary.base_salary) +
-                                    Number(salary.bonus || 0) +
-                                    Number(salary.overtime || 0) -
-                                    Number(salary.deductions || 0),
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Salary by Department Breakdown */}
-                  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <h4 className="mb-2 text-sm font-medium text-gray-700">Salary by Department</h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b text-left text-xs font-medium uppercase text-gray-500">
-                            <th className="pb-3 pl-4">Department</th>
-                            <th className="pb-3">Avg. Salary</th>
-                            <th className="pb-3">Employee Count</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {analyticsData.salaryData.departmentSalaries.map((dept) => (
-                            <tr key={dept.department} className="border-b last:border-0 hover:bg-gray-50">
-                              <td className="py-3 pl-4">{dept.department}</td>
-                              <td className="py-3">{formatCurrency(dept.avgSalary)}</td>
-                              <td className="py-3">{dept.count}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Salary Growth Chart */}
-                  <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <h4 className="mb-2 text-sm font-medium text-gray-700">Salary Growth</h4>
-                    {analyticsData.salaryData.monthlySalaries && analyticsData.salaryData.monthlySalaries.length > 0 ? (
-                      <div className="h-48">
-                        {/* Placeholder for chart */}
-                        <p className="text-center text-gray-500">Chart will be displayed here</p>
-                      </div>
-                    ) : (
-                      <p className="text-center text-gray-500">No monthly salary data available</p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-40 items-center justify-center text-gray-400">
-                  <p>No data available</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <SalariesTab
+          analyticsData={analyticsData}
+          formatCurrency={formatCurrency}
+          getCompensationPercentage={getCompensationPercentage}
+        />
       )}
     </div>
   )
