@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Check, X, Sparkles, ArrowLeft } from "lucide-react"
- 
+
 import api from "@/lib/api"
 import { useSelector } from "react-redux"
 
@@ -221,98 +221,99 @@ function PricingContent() {
   // Helper function to conditionally join class names
   const cn = (...classes: string[]) => classes.filter(Boolean).join(" ")
 
-  return ( 
-      <main className="bg-[#FAF9F7] text-[#1E293B] min-h-screen">
-        <section className="py-20 px-8 md:px-32 max-w-7xl mx-auto">
-          {isRenewing && (
-            <div className="mb-8">
-              <button
-                onClick={handleBackToSubscription}
-                className="flex items-center text-[#6148F4] hover:text-[#5040D9] transition-colors mb-4"
-                aria-label="Back to Subscription"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Subscription
-              </button>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">Renew Your Subscription</h1>
-              <p className="text-lg text-gray-600 max-w-2xl">
-                Choose a plan to renew your subscription. Your new subscription period will start when your current one
-                ends.
-              </p>
-            </div>
-          )}
-
-          {!isRenewing && (
-            <div className="text-center mb-16">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">Simple, transparent pricing</h1>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Whether your time-saving automation needs are large or small, we're here to help you scale.
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-center items-center mb-16">
-            <div className="bg-white p-1.5 rounded-lg shadow-sm inline-flex relative">
-              <div
-                className={`absolute top-1.5 bottom-1.5 w-[calc(50%-3px)] rounded-md bg-[#F0EEFF] transition-all duration-300 ease-in-out ${
-                  billingCycle === "yearly" ? "left-[calc(50%+1.5px)]" : "left-1.5px"
-                }`}
-              ></div>
-              <button
-                onClick={() => setBillingCycle("monthly")}
-                className={`relative z-10 px-6 py-2 rounded-md font-medium transition-all ${
-                  billingCycle === "monthly" ? "text-[#6148F4]" : "text-gray-500 hover:text-gray-700"
-                }`}
-                aria-label="Monthly billing"
-                aria-pressed={billingCycle === "monthly"}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingCycle("yearly")}
-                className={`relative z-10 px-6 py-2 rounded-md font-medium transition-all ${
-                  billingCycle === "yearly" ? "text-[#6148F4]" : "text-gray-500 hover:text-gray-700"
-                }`}
-                aria-label="Yearly billing"
-                aria-pressed={billingCycle === "yearly"}
-              >
-                Yearly
-                {billingCycle === "yearly" && (
-                  <span className="absolute -top-3 -right-2 bg-[#4ADE80] text-xs text-black font-bold py-0.5 px-2 rounded-full">
-                    Save 20%
-                  </span>
-                )}
-              </button>
-            </div>
+  return (
+    <main className="bg-[#FAF9F7] text-[#1E293B] min-h-screen">
+      <section className="py-20 px-8 md:px-32 max-w-7xl mx-auto">
+        {isRenewing && (
+          <div className="mb-8">
+            <button
+              onClick={handleBackToSubscription}
+              className="flex items-center text-[#6148F4] hover:text-[#5040D9] transition-colors mb-4"
+              aria-label="Back to Subscription"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Subscription
+            </button>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Renew Your Subscription</h1>
+            <p className="text-lg text-gray-600 max-w-2xl">
+              Choose a plan to renew your subscription. Your new subscription period will start when your current one
+              ends.
+            </p>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {allPlans.map((plan) => {
-              if (!plan || !plan.id) return null
+        {!isRenewing && (
+          <div className="text-center mb-16">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Simple, transparent pricing</h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Whether your time-saving automation needs are large or small, we're here to help you scale.
+            </p>
+          </div>
+        )}
 
-              const isPopular = plan.name === "Company"
-              const isFree = plan.name === "Free"
-              const finalPrice = calculateFinalPrice(plan.price, plan.discount_percent)
-              const isCurrentPlan = companyData?.subscription_plan_id === plan.id
+        <div className="flex justify-center items-center mb-16">
+          <div className="bg-white p-1.5 rounded-lg shadow-sm inline-flex relative">
+            <div
+              className={`absolute top-1.5 bottom-1.5 w-[calc(50%-3px)] rounded-md bg-[#F0EEFF] transition-all duration-300 ease-in-out ${
+                billingCycle === "yearly" ? "left-[calc(50%+1.5px)]" : "left-1.5px"
+              }`}
+            ></div>
+            <button
+              onClick={() => setBillingCycle("monthly")}
+              className={`relative z-10 px-6 py-2 rounded-md font-medium transition-all ${
+                billingCycle === "monthly" ? "text-[#6148F4]" : "text-gray-500 hover:text-gray-700"
+              }`}
+              aria-label="Monthly billing"
+              aria-pressed={billingCycle === "monthly"}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle("yearly")}
+              className={`relative z-10 px-6 py-2 rounded-md font-medium transition-all ${
+                billingCycle === "yearly" ? "text-[#6148F4]" : "text-gray-500 hover:text-gray-700"
+              }`}
+              aria-label="Yearly billing"
+              aria-pressed={billingCycle === "yearly"}
+            >
+              Yearly
+              {billingCycle === "yearly" && (
+                <span className="absolute -top-3 -right-2 bg-[#4ADE80] text-xs text-black font-bold py-0.5 px-2 rounded-full">
+                  Save 20%
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
 
-              return (
-                <div
-                  key={plan.id}
-                  className={`rounded-2xl shadow-sm ${isPopular ? "bg-gradient-to-br from-[#6148F4] to-[#5040D9] text-white border-transparent" : "bg-white text-gray-900 border border-gray-200"} hover:border-gray-300 transition-all duration-300 overflow-hidden transform hover:-translate-y-1 ${isCurrentPlan ? "ring-2 ring-[#4ADE80]" : ""}`}
-                >
-                  {isPopular && (
-                    <div className="bg-[#4ADE80] text-black py-2 px-4 text-center text-sm font-bold flex items-center justify-center">
-                      <Sparkles className="h-4 w-4 mr-1" /> MOST POPULAR
-                    </div>
-                  )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {allPlans.map((plan) => {
+            if (!plan || !plan.id) return null
 
-                  {isCurrentPlan && !isPopular && (
-                    <div className="bg-[#4ADE80] text-black py-2 px-4 text-center text-sm font-bold flex items-center justify-center">
-                      <Check className="h-4 w-4 mr-1" /> CURRENT PLAN
-                    </div>
-                  )}
+            const isPopular = plan.name === "Company"
+            const isFree = plan.name === "Free"
+            const finalPrice = calculateFinalPrice(plan.price, plan.discount_percent)
+            const isCurrentPlan = companyData?.subscription_plan_id === plan.id
 
-                  <div className="p-8">
+            return (
+              <div
+                key={plan.id}
+                className={`rounded-2xl shadow-sm flex flex-col ${isPopular ? "bg-gradient-to-br from-[#6148F4] to-[#5040D9] text-white border-transparent" : "bg-white text-gray-900 border border-gray-200"} hover:border-gray-300 transition-all duration-300 overflow-hidden transform hover:-translate-y-1 ${isCurrentPlan ? "ring-2 ring-[#4ADE80]" : ""}`}
+              >
+                {isPopular && (
+                  <div className="bg-[#4ADE80] text-black py-2 px-4 text-center text-sm font-bold flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 mr-1" /> MOST POPULAR
+                  </div>
+                )}
+
+                {isCurrentPlan && !isPopular && (
+                  <div className="bg-[#4ADE80] text-black py-2 px-4 text-center text-sm font-bold flex items-center justify-center">
+                    <Check className="h-4 w-4 mr-1" /> CURRENT PLAN
+                  </div>
+                )}
+
+                <div className="p-8 flex flex-col h-full">
+                  <div className="flex-1">
                     <h3 className="text-2xl font-bold mb-1">{plan.name}</h3>
                     <p className="text-sm opacity-80 mb-4">{plan.description || ""}</p>
                     <div className="flex items-baseline">
@@ -356,7 +357,9 @@ function PricingContent() {
                           )
                         })}
                     </div>
+                  </div>
 
+                  <div className="mt-auto pt-6">
                     <button
                       onClick={() => handlePlanSelection(plan.id)}
                       className={`w-full py-3 rounded-lg font-semibold text-center transition ${
@@ -378,11 +381,11 @@ function PricingContent() {
                     </button>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        </section>
-      </main>
-       
+              </div>
+            )
+          })}
+        </div>
+      </section>
+    </main>
   )
 }

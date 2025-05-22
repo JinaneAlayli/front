@@ -166,12 +166,12 @@ export default function Sidebar({ onToggle }: SidebarProps) {
     { href: "/employees", label: "Employees", icon: <UserPlus size={20} /> },
     { href: "/teams", label: "Teams", icon: <Users size={20} />  },
     { href: "/attendance", label: "Attendance", icon: <Clock size={20} /> },
-    { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
-    { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
-    { href: "/analytics", label: "Analytics", icon: <BarChart4 size={20} /> },
+     { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
     { href: "/salaries", label: "Salary Management", icon: <DollarSign size={20} /> },
-    { href: "/leave-requests", label: "leave requests", icon: <CalendarArrowUp size={20} /> },
+   { href: "/tasks", label: "Tasks", icon: <ClipboardCheck size={20} /> },
+     { href: "/announcements", label: "Announcement", icon: <Megaphone size={20} /> },
     { href: "/business-settings", label: "Business Settings", icon: <Settings size={20} /> },
+    { href: "/analytics", label: "Analytics", icon: <BarChart4 size={20} /> },
     { href: "/subscription", label: "subscription plan", icon: <CreditCard size={20} /> },
   ]
 

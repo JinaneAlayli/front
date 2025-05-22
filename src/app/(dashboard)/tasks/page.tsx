@@ -30,6 +30,9 @@ export default function TasksPage() {
     dueDate: "",
   })
 
+  const [employees, setEmployees] = useState([])
+  const [selectedEmployee, setSelectedEmployee] = useState("")
+
   // Check if user is an employee with role_id === 5
   const isEmployee = user?.role_id === 5
   // Check if user is a team leader with role_id === 4
@@ -61,6 +64,15 @@ export default function TasksPage() {
     }
   }
 
+  const fetchEmployees = async () => {
+    try {
+      const res = await api.get("/users")
+      setEmployees(res.data)
+    } catch (error) {
+      console.error("Failed to fetch employees:", error)
+    }
+  }
+
   useEffect(() => {
     if (!user || hasBlocked.current) return
 
@@ -73,6 +85,12 @@ export default function TasksPage() {
 
     fetchTasks()
   }, [user, router])
+
+  useEffect(() => {
+    if (user && (user.role_id === 2 || user.role_id === 3)) {
+      fetchEmployees()
+    }
+  }, [user])
 
   // Refetch tasks when role changes
   useEffect(() => {
@@ -154,7 +172,10 @@ export default function TasksPage() {
       (filters.dueDate === "upcoming" && task.due_date && new Date(task.due_date) > new Date()) ||
       (filters.dueDate === "no-date" && !task.due_date)
 
-    return matchesSearch && matchesCompleted && matchesDueDate
+    // Employee filter - only for Owner and HR roles
+    const matchesEmployee = selectedEmployee === "" || (task.user && task.user.id.toString() === selectedEmployee)
+
+    return matchesSearch && matchesCompleted && matchesDueDate && matchesEmployee
   })
 
   return (
@@ -273,9 +294,33 @@ export default function TasksPage() {
                     </select>
                   </div>
 
+                  {(user?.role_id === 2 || user?.role_id === 3) && (
+                    <div>
+                      <label htmlFor="employee-filter" className="mb-1 block text-xs font-medium text-gray-700">
+                        Filter by Employee
+                      </label>
+                      <select
+                        id="employee-filter"
+                        value={selectedEmployee}
+                        onChange={(e) => setSelectedEmployee(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#6148F4] focus:outline-none focus:ring-1 focus:ring-[#6148F4]/50"
+                      >
+                        <option value="">All Employees</option>
+                        {employees.map((employee: any) => (
+                          <option key={employee.id} value={employee.id.toString()}>
+                            {employee.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="flex items-end sm:col-span-2">
                     <button
-                      onClick={() => setFilters({ completed: "", dueDate: "" })}
+                      onClick={() => {
+                        setFilters({ completed: "", dueDate: "" })
+                        setSelectedEmployee("")
+                      }}
                       className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
                     >
                       Clear Filters

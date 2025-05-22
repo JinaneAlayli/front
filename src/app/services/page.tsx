@@ -1,20 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import {
-  Calendar,
-  DollarSign,
-  Users,
-  ClipboardCheck,
-  BarChart3,
-  UserPlus,
-  Clock,
-  Zap,
-  Shield,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react"
+import { Users, BarChart3, Zap, Shield, ChevronRight, ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -37,7 +24,7 @@ export default function ServicesPage() {
     <>
       <Header />
       <main className="bg-[#FAF9F7] text-[#1E293B]">
-         <section className="py-26 px-8 md:px-32 max-w-7xl mx-auto">
+        <section className="py-26 px-8 md:px-32 max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6">HR Services Tailored to Your Team</h1>
@@ -46,7 +33,9 @@ export default function ServicesPage() {
                 to help your team thrive, whether in-office or remote.
               </p>
               <Link
-                href="#"
+                href="/pricing"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center bg-[#4ADE80] text-black hover:opacity-90 px-6 py-3 rounded-md font-medium transition-colors"
               >
                 Get Started <ChevronRight className="ml-2 h-4 w-4" />
@@ -64,13 +53,11 @@ export default function ServicesPage() {
           </div>
         </section>
 
-         <section className="py-16 px-8 md:px-32 max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold mb-12  ">
-            Streamline Your HR Operations in One Central Hub
-          </h2>
+        <section className="py-16 px-8 md:px-32 max-w-7xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold mb-12  ">Streamline Your HR Operations in One Central Hub</h2>
 
           {/* WorkPulse Section */}
-          <div className="mb-8 border-b border-gray-200 pb-8">
+          <div className="mb-8 border-b border-gray-300 pb-8">
             <div
               className="flex justify-between items-center cursor-pointer"
               onClick={() => toggleSection("workpulse")}
@@ -92,10 +79,12 @@ export default function ServicesPage() {
                     Get real-time visibility on who's working, when, and for how long no spreadsheets needed
                   </p>
                   <Link
-                    href="#"
-                    className="inline-flex items-center bg-[#F3F4F6] text-gray-800 hover:bg-gray-200 px-6 py-2 rounded-md font-medium transition-colors text-sm"
+                    href="https://drive.google.com/file/d/1XCPZkCOKRmzYJPMO9Ac68FiYjQTmkS9u/view?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
                   >
-                    View Demo
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
                   </Link>
                 </div>
                 <div className="relative">
@@ -112,7 +101,7 @@ export default function ServicesPage() {
           </div>
 
           {/* SmartLeave Section */}
-          <div className="mb-8 border-b border-gray-200 pb-8">
+          <div className="mb-8 border-b border-gray-300 pb-8">
             <div
               className="flex justify-between items-center cursor-pointer"
               onClick={() => toggleSection("smartleave")}
@@ -135,10 +124,12 @@ export default function ServicesPage() {
                     Automate leave balance calculations and ensure proper staffing levels at all times.
                   </p>
                   <Link
-                    href="#"
-                    className="inline-flex items-center bg-[#F3F4F6] text-gray-800 hover:bg-gray-200 px-6 py-2 rounded-md font-medium transition-colors text-sm"
+                    href="https://drive.google.com/file/d/1r6R1-kaZ0dbgSG8ts9nHwCLPkD4Soo-F/view?usp=drive_link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
                   >
-                    View Demo
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
                   </Link>
                 </div>
                 <div className="relative">
@@ -155,7 +146,7 @@ export default function ServicesPage() {
           </div>
 
           {/* TaskFlow Section */}
-          <div className="mb-8 border-b border-gray-200 pb-8">
+          <div className="mb-8 border-b border-gray-300 pb-8">
             <div
               className="flex justify-between items-center cursor-pointer"
               onClick={() => toggleSection("trainflow")}
@@ -177,10 +168,12 @@ export default function ServicesPage() {
                     Generate comprehensive reports on training effectiveness and compliance.
                   </p>
                   <Link
-                    href="#"
-                    className="inline-flex items-center bg-[#F3F4F6] text-gray-800 hover:bg-gray-200 px-6 py-2 rounded-md font-medium transition-colors text-sm"
+                    href="https://drive.google.com/file/d/1C9dJ7FSkQto44ktyB-5cpuYrL1lnAdtI/view?usp=drive_link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
                   >
-                    View Demo
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
                   </Link>
                 </div>
                 <div className="relative">
@@ -197,7 +190,7 @@ export default function ServicesPage() {
           </div>
 
           {/* Payroll & Payslips Section */}
-          <div className="mb-8">
+          <div className="mb-8 border-b border-gray-300 pb-8">
             <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleSection("payroll")}>
               <h3 className="text-2xl font-bold">Payroll & Payslips</h3>
               {expandedSection === "payroll" ? (
@@ -218,10 +211,12 @@ export default function ServicesPage() {
                     Provide employees with digital payslips and payment history access.
                   </p>
                   <Link
-                    href="#"
-                    className="inline-flex items-center bg-[#F3F4F6] text-gray-800 hover:bg-gray-200 px-6 py-2 rounded-md font-medium transition-colors text-sm"
+                    href="https://drive.google.com/file/d/1yaMPCBFJ4kSvAL3hLE_dmS96X6c2JKD3/view?usp=drive_link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
                   >
-                    View Demo
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
                   </Link>
                 </div>
                 <div className="relative">
@@ -236,61 +231,258 @@ export default function ServicesPage() {
               </div>
             )}
           </div>
+
+          {/* Team Management Section */}
+          <div className="mb-8 border-b border-gray-300 pb-8">
+            <div
+              className="flex justify-between items-center cursor-pointer"
+              onClick={() => toggleSection("teammanagement")}
+            >
+              <h3 className="text-2xl font-bold">Team Management</h3>
+              {expandedSection === "teammanagement" ? (
+                <ChevronUp className="h-6 w-6 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-6 w-6 text-gray-500" />
+              )}
+            </div>
+
+            {expandedSection === "teammanagement" && (
+              <div className="mt-6 grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <p className="text-gray-700 mb-2">
+                    Efficiently organize and manage your teams with our intuitive interface.
+                  </p>
+                  <p className="text-gray-700 mb-2">
+                    Create team structures, assign roles, and monitor team performance.
+                  </p>
+                  <p className="text-gray-700 mb-6">
+                    Facilitate better collaboration and communication between team members.
+                  </p>
+                  <Link
+                    href="https://drive.google.com/file/d/1WYSpxdxB0OqGw6c8h65homX0vhibPRvZ/view?usp=drive_link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
+                  >
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Image
+                    src="/team.png"
+                    width={500}
+                    height={300}
+                    alt="Team management interface"
+                    className="rounded-lg shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Employee Management Section */}
+          <div className="mb-8 border-b border-gray-300 pb-8">
+            <div
+              className="flex justify-between items-center cursor-pointer"
+              onClick={() => toggleSection("employeemanagement")}
+            >
+              <h3 className="text-2xl font-bold">Employee Management</h3>
+              {expandedSection === "employeemanagement" ? (
+                <ChevronUp className="h-6 w-6 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-6 w-6 text-gray-500" />
+              )}
+            </div>
+
+            {expandedSection === "employeemanagement" && (
+              <div className="mt-6 grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <p className="text-gray-700 mb-2">
+                    Maintain comprehensive employee records in one centralized system.
+                  </p>
+                  <p className="text-gray-700 mb-2">Track employee performance, skills, and career development.</p>
+                  <p className="text-gray-700 mb-6">
+                    Streamline onboarding and offboarding processes with automated workflows.
+                  </p>
+                  <Link
+                    href="https://drive.google.com/file/d/1YAI4Yr85i_0UXTEyCoYgAhBpJIBvi8N5/view?usp=drive_link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
+                  >
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Image
+                    src="/employees.png"
+                    width={500}
+                    height={300}
+                    alt="Employee management interface"
+                    className="rounded-lg shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Announcements Section */}
+          <div className="mb-8 border-b border-gray-300 pb-8">
+            <div
+              className="flex justify-between items-center cursor-pointer"
+              onClick={() => toggleSection("announcements")}
+            >
+              <h3 className="text-2xl font-bold">Announcements</h3>
+              {expandedSection === "announcements" ? (
+                <ChevronUp className="h-6 w-6 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-6 w-6 text-gray-500" />
+              )}
+            </div>
+
+            {expandedSection === "announcements" && (
+              <div className="mt-6 grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <p className="text-gray-700 mb-2">
+                    Keep your entire organization informed with company-wide announcements.
+                  </p>
+                  <p className="text-gray-700 mb-2">
+                    Target specific departments or teams with tailored communications.
+                  </p>
+                  <p className="text-gray-700 mb-6">
+                    Track readership and engagement to ensure important messages reach your team.
+                  </p>
+                  <Link
+                    href="https://drive.google.com/file/d/1JAlknyiTEs0hT8Jh7cqr4Jyp_4zq9A8K/view?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
+                  >
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Image
+                    src="/announcements.png"
+                    width={500}
+                    height={300}
+                    alt="Announcements interface"
+                    className="rounded-lg shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Analytics Section */}
+          <div className="mb-8">
+            <div
+              className="flex justify-between items-center cursor-pointer"
+              onClick={() => toggleSection("analytics")}
+            >
+              <h3 className="text-2xl font-bold">Monthly Analytics</h3>
+              {expandedSection === "analytics" ? (
+                <ChevronUp className="h-6 w-6 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-6 w-6 text-gray-500" />
+              )}
+            </div>
+
+            {expandedSection === "analytics" && (
+              <div className="mt-6 grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <p className="text-gray-700 mb-2">
+                    Gain valuable insights with comprehensive HR analytics and reporting.
+                  </p>
+                  <p className="text-gray-700 mb-2">
+                    Track key metrics like attendance, performance, and employee satisfaction.
+                  </p>
+                  <p className="text-gray-700 mb-6">
+                    Make data-driven decisions with customizable dashboards and visualizations.
+                  </p>
+                  <Link
+                    href="https://drive.google.com/file/d/1pkSPH6TVXfLkasy6Gn3A3BFoEYTu0sCq/view?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center bg-[#4ADE80] text-black hover:bg-[#3AC070] px-6 py-2.5 rounded-md font-medium transition-colors text-sm"
+                  >
+                    See Demo <ChevronRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Image
+                    src="/analytics.png"
+                    width={500}
+                    height={300}
+                    alt="Analytics dashboard interface"
+                    className="rounded-lg shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
-        
+        {/* Why Choose Beteamly Section - Enhanced */}
+        <section className="py-20 px-8 md:px-32 max-w-7xl mx-auto bg-gradient-to-b from-white to-[#F5F9FF]">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 relative inline-block">
+              Why Choose Beteamly
+              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-[#4ADE80] rounded-full"></div>
+            </h2>
+            <p className="text-lg text-gray-700 mt-6">
+              Our platform is designed with modern workplaces in mind, offering powerful features that adapt to your
+              organization's unique needs.
+            </p>
+          </div>
 
-        {/* Features Highlight Section - Simplified */}
-        <section className="py-20 px-8 md:px-32 max-w-7xl mx-auto">
-          <div className="bg-white rounded-xl p-12 shadow-sm">
-            <div className="max-w-3xl mx-auto text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">Why Choose Beteamly</h2>
-              <p className="text-lg text-gray-700">
-                Our platform is designed with modern workplaces in mind, offering powerful features that adapt to your
-                organization's unique needs.
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+            <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-[#4ADE80]/30 group">
+              <div className="bg-[#4ADE80]/10 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-[#4ADE80]/20 transition-all duration-300">
+                <Zap className="h-7 w-7 text-[#4ADE80]" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Powerful Automation</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Automate routine HR tasks and workflows to save time, reduce errors, and focus on what matters most—your
+                people.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="p-6">
-                <div className="bg-[#4ADE80]/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-[#4ADE80]" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Powerful Automation</h3>
-                <p className="text-gray-600">Automate routine HR tasks and workflows to save time and reduce errors.</p>
+            <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-[#6148F4]/30 group">
+              <div className="bg-[#6148F4]/10 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-[#6148F4]/20 transition-all duration-300">
+                <Shield className="h-7 w-7 text-[#6148F4]" />
               </div>
+              <h3 className="text-xl font-bold mb-3"> Enterprise-Grade Security</h3>
+              <p className="text-gray-600 leading-relaxed">
+               At Beteamly, we follow best practices to keep your company’s HR data secure
+               to protecting sensitive employee information from unauthorized access.
+              </p>
+            </div>
 
-              <div className="p-6">
-                <div className="bg-[#6148F4]/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                  <Shield className="h-6 w-6 text-[#6148F4]" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Enterprise Security</h3>
-                <p className="text-gray-600">
-                  Bank-level encryption and compliance with global data protection standards.
-                </p>
+            <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-[#4ADE80]/30 group">
+              <div className="bg-[#4ADE80]/10 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-[#4ADE80]/20 transition-all duration-300">
+                <Users className="h-7 w-7 text-[#4ADE80]" />
               </div>
+              <h3 className="text-xl font-bold mb-3">Team Collaboration</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Foster seamless communication and collaboration across departments with integrated tools designed for
+                modern teams.
+              </p>
+            </div>
 
-              <div className="p-6">
-                <div className="bg-[#4ADE80]/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-[#4ADE80]" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Team Collaboration</h3>
-                <p className="text-gray-600">Foster seamless communication and collaboration across departments.</p>
+            <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-[#6148F4]/30 group">
+              <div className="bg-[#6148F4]/10 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-[#6148F4]/20 transition-all duration-300">
+                <BarChart3 className="h-7 w-7 text-[#6148F4]" />
               </div>
-
-              <div className="p-6">
-                <div className="bg-[#6148F4]/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                  <BarChart3 className="h-6 w-6 text-[#6148F4]" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Advanced Analytics</h3>
-                <p className="text-gray-600">
-                  Gain insights with comprehensive reporting and data visualization tools.
-                </p>
-              </div>
+              <h3 className="text-xl font-bold mb-3">Advanced Analytics</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Gain actionable insights with comprehensive reporting and data visualization tools to make informed HR
+                decisions.
+              </p>
             </div>
           </div>
-        </section>
  
+        </section>
       </main>
       <Footer />
     </>

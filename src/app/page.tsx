@@ -33,10 +33,10 @@ export default function HomePage() {
               </Link>
             ) : (
               <Link
-                href="/pricing"
+                href="/about"
                 className="inline-block bg-[#4ADE80] text-black px-6 py-3 rounded-md font-medium shadow-sm hover:opacity-90 transition"
               >
-                Get Started
+                see more
               </Link>
             )}
           </div>
@@ -99,12 +99,13 @@ export default function HomePage() {
                 Go to Dashboard
               </Link>
             ) : (
-              <button
+              <Link
+                href="/services"
                 className="bg-[#4ADE80] text-black px-6 py-3 rounded-md font-medium shadow-sm hover:opacity-90 transition"
                 
               >
-                See a Demo
-              </button>
+                our services
+               </Link>
             )}
           </div>
         </section>

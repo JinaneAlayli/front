@@ -238,7 +238,7 @@ useEffect(() => {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen bg-gradient-to-b from-[#F9F8FF] to-[#FAF9F7] text-gray-900">
+      <main className="min-h-screen  text-gray-900">
         <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
           {/* Header Section */}
           <div className="mb-8">
