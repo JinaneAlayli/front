@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect,useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
- import { useSelector } from "react-redux"
+import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import SalaryTable from "@/components/salaries/SalaryTable"
@@ -11,34 +11,14 @@ import PayslipUploadModal from "@/components/salaries/PayslipUploadModal"
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal"
 import api from "@/lib/api"
 import { toast } from "react-toastify"
-import { PlusCircle, FileText, Filter, DollarSign, Calendar, Users, ChevronDown } from "lucide-react"
+import { PlusCircle, FileText, Filter, DollarSign, Calendar, Users, ChevronDown, AlertTriangle } from "lucide-react"
 
 export default function SalariesPage() {
-
   const router = useRouter()
-const hasBlocked  = useRef(false)
+  const hasBlocked = useRef(false)
   const { user } = useSelector((state: RootState) => state.auth)
-  const [salaries, setSalaries] = useState<
-    Array<{
-      id: number
-      user_id: number
-      user?: {
-        id: number
-        name: string
-        position?: string
-      }
-      month: number
-      year: number
-      base_salary: number
-      bonus: number
-      overtime: number
-      deductions: number
-      effective_from: string
-      status: string
-      payslip_requested?: boolean
-      file_url?: string
-    }>
-  >([])
+
+  const [salaries, setSalaries] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [openModal, setOpenModal] = useState(false)
   const [openUploadModal, setOpenUploadModal] = useState(false)
@@ -49,7 +29,7 @@ const hasBlocked  = useRef(false)
     month: "",
     year: "",
     employee: "",
-    status: "", // Add status filter
+    status: "",
   })
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deletingSalaryId, setDeletingSalaryId] = useState<number | null>(null)
@@ -98,19 +78,19 @@ const hasBlocked  = useRef(false)
       setLoading(false)
     }
   }
-useEffect(() => {
-  if (!user || hasBlocked.current) return
 
-  if (user.role_id === 1) {
-    hasBlocked.current = true
-    toast.error("Superadmin is not allowed to view salaries.")
-    router.push("/dashboard")
-    return
-  }
+  useEffect(() => {
+    if (!user || hasBlocked.current) return
 
-  fetchSalaries()
-}, [user])
+    if (user.role_id === 1) {
+      hasBlocked.current = true
+      toast.error("Superadmin is not allowed to view salaries.")
+      router.push("/dashboard")
+      return
+    }
 
+    fetchSalaries()
+  }, [user, router])
 
   const handleCreate = () => {
     setEditingSalary(null)
@@ -159,19 +139,49 @@ useEffect(() => {
     setOpenUploadModal(true)
   }
 
-  const handleRequestPayslip = async (userId: number) => {
+  const handleRequestPayslip = async (salaryId: number) => {
     try {
-      await api.post(`/salaries/request-payslip/${userId}`)
+      // Find the salary record to get the current month
+      const salary = salaries.find((s) => s.id === salaryId)
+      if (!salary) {
+        toast.error("Salary record not found")
+        return
+      }
+
+      // Check if this is for the current month
+      const currentDate = new Date()
+      const currentMonth = currentDate.getMonth() + 1
+      const currentYear = currentDate.getFullYear()
+
+      if (salary.month !== currentMonth || salary.year !== currentYear) {
+        toast.error("You can only request payslips for the current month")
+        return
+      }
+
+      await api.post(`/salaries/request-payslip/${salary.user_id}`)
       toast.success("Payslip requested successfully")
       fetchSalaries()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to request payslip:", error)
-      toast.error("Failed to request payslip")
+      const errorMessage = error.response?.data?.message || "Failed to request payslip"
+      toast.error(errorMessage)
     }
   }
 
-  const handleDownloadPayslip = (fileUrl: string) => {
-    window.open(fileUrl, "_blank")
+  const handleDownloadPayslip = async (salaryId: number) => {
+    try {
+      const response = await api.get(`/salaries/${salaryId}/download-payslip`)
+      if (response.data?.file_url) {
+        // Open the file URL in a new tab
+        window.open(response.data.file_url, "_blank")
+      } else {
+        toast.error("Payslip file not available")
+      }
+    } catch (error: any) {
+      console.error("Failed to download payslip:", error)
+      const errorMessage = error.response?.data?.message || "Failed to download payslip"
+      toast.error(errorMessage)
+    }
   }
 
   const handleFormSuccess = () => {
@@ -218,7 +228,7 @@ useEffect(() => {
       (filters.month === "" || salary.month === Number(filters.month)) &&
       (filters.year === "" || salary.year === Number(filters.year)) &&
       (filters.employee === "" || salary.user_id === Number(filters.employee)) &&
-      (filters.status === "" || salary.status === filters.status) // Add status filter condition
+      (filters.status === "" || salary.status === filters.status)
     )
   })
 
@@ -238,7 +248,7 @@ useEffect(() => {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen  text-gray-900">
+      <main className="min-h-screen bg-gradient-to-b from-[#F9F8FF] to-[#FAF9F7] text-gray-900">
         <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
           {/* Header Section */}
           <div className="mb-8">
@@ -248,6 +258,21 @@ useEffect(() => {
                 ? "Manage and process salary records for all employees in your organization"
                 : "View your salary history and download payslips"}
             </p>
+
+            {/* Role-based access notice */}
+            {!isManager && (
+              <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-4">
+                <div className="flex items-start">
+                  <AlertTriangle className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium">Employee Access</p>
+                    <p className="mt-1">
+                      You can view your own salary records and request payslips for the current month only.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Stats Cards */}
@@ -342,7 +367,7 @@ useEffect(() => {
           {/* Filters */}
           {showFilters && (
             <div className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <label htmlFor="month-filter" className="mb-1.5 block text-sm font-medium text-gray-700">
                     Month
@@ -401,7 +426,7 @@ useEffect(() => {
                     </select>
                   </div>
                 )}
-                {/* Status Filter */}
+
                 <div>
                   <label htmlFor="status-filter" className="mb-1.5 block text-sm font-medium text-gray-700">
                     Status
@@ -443,6 +468,7 @@ useEffect(() => {
               onRequestPayslip={handleRequestPayslip}
               onDownloadPayslip={handleDownloadPayslip}
               userRoleId={user?.role_id}
+              currentUserId={user?.id}
               onSalaryCreated={fetchSalaries}
               onSalaryUpdated={fetchSalaries}
             />
